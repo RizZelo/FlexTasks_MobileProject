@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/pages/task_list_screen.dart';
+import 'package:my_app/pages/home_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const TaskListScreen(),
+      home: const HomePage(),
     );
   }
 }
