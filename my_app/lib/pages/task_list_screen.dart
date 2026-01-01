@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'post_task_screen.dart';
+import 'users_list_page.dart';
+import '../services/auth_service.dart';
 
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({Key? key}) : super(key: key);
@@ -74,6 +77,25 @@ class _TaskListScreenState extends State<TaskListScreen>
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.chat_bubble_outline),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => UsersListPage()),
+              );
+            },
+            tooltip: 'Messages',
+          ),
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () async {
+              await AuthService().signOut();
+            },
+            tooltip: 'Logout',
+          ),
+        ],
         flexibleSpace: Container(
           decoration: BoxDecoration(
             color: Colors.teal,
@@ -314,6 +336,18 @@ class _TaskListScreenState extends State<TaskListScreen>
                   ),
                   Row(
                     children: [
+                      IconButton(
+                        icon: Icon(Icons.message_outlined, color: Colors.teal),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UsersListPage(),
+                            ),
+                          );
+                        },
+                        tooltip: 'Contact about task',
+                      ),
                       IconButton(
                         icon: Icon(Icons.edit_outlined, color: Colors.blue),
                         onPressed: () {

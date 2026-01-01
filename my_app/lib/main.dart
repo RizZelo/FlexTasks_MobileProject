@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/pages/task_list_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
+import 'pages/task_list_screen.dart';
+import 'pages/login_page.dart';
+import 'pages/register_page.dart';
+import 'services/user_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -15,7 +25,6 @@ class MyApp extends StatelessWidget {
       title: 'Flex Tasks',
       theme: ThemeData(
         primarySwatch: Colors.teal,
-
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           focusedBorder: OutlineInputBorder(
@@ -23,7 +32,6 @@ class MyApp extends StatelessWidget {
             borderSide: BorderSide(color: Colors.teal, width: 2),
           ),
         ),
-
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             shape: RoundedRectangleBorder(
@@ -33,7 +41,43 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const TaskListScreen(),
+      home: const AuthWrapper(),
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
+        '/tasks': (context) => const TaskListScreen(),
+      },
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Show loading while checking auth state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        // If user is logged in, show task list
+        if (snapshot.hasData && snapshot.data != null) {
+          // Update online status
+          UserService().updateOnlineStatus(true);
+          return const TaskListScreen();
+        }
+
+        // If user is not logged in, show login page
+        return const LoginPage();
+      },
     );
   }
 }
