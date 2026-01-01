@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"flextaskchat","appId":"1:706359142236:android:4302e4479e70527d178399","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"flextaskchat","configurations":{"android":"1:706359142236:android:4302e4479e70527d178399","ios":"1:706359142236:ios:acfb47472952d46e178399"}}}}}}
