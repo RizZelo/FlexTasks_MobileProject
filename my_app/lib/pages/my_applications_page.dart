@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/application_service.dart';
+import 'review_page.dart';
 import 'task_detail_page.dart';
 
 class MyApplicationsPage extends StatefulWidget {
@@ -323,6 +324,36 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                         ),
                       ),
                     ],
+                  ),
+                ),
+                SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ReviewPage(
+                            revieweeId: app['clientId'],
+                            revieweeName: app['clientName'] ?? 'Client',
+                            revieweeRole: 'client',
+                            taskId: app['taskId'],
+                            taskTitle: app['taskTitle'] ?? '',
+                          ),
+                        ),
+                      );
+                      if (result == true && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Review submitted for the client'),
+                            backgroundColor: Colors.teal,
+                          ),
+                        );
+                      }
+                    },
+                    icon: Icon(Icons.star_rate, color: Colors.amber),
+                    label: Text('Rate Client'),
                   ),
                 ),
               ],

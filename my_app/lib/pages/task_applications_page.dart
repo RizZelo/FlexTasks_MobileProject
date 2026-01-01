@@ -4,6 +4,7 @@ import '../services/application_service.dart';
 import '../services/task_service.dart';
 import 'chat_page.dart';
 import 'client_profile_page.dart';
+import 'review_page.dart';
 
 class TaskApplicationsPage extends StatefulWidget {
   final String taskId;
@@ -454,26 +455,59 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
               if (app['status'] == 'accepted')
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatPage(
-                            receiverId: app['applicantId'],
-                            receiverName: app['applicantName'] ?? 'Unknown',
-                            receiverEmail: app['applicantEmail'] ?? '',
-                          ),
+                  child: Column(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatPage(
+                                receiverId: app['applicantId'],
+                                receiverName: app['applicantName'] ?? 'Unknown',
+                                receiverEmail: app['applicantEmail'] ?? '',
+                              ),
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.chat_bubble_outline),
+                        label: Text('Contact ${app['applicantName']}'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 12),
                         ),
-                      );
-                    },
-                    icon: Icon(Icons.chat_bubble_outline),
-                    label: Text('Contact ${app['applicantName']}'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                    ),
+                      ),
+                      SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ReviewPage(
+                                revieweeId: app['applicantId'],
+                                revieweeName: app['applicantName'] ?? 'Student',
+                                revieweeRole: 'student',
+                                taskId: app['taskId'],
+                                taskTitle: app['taskTitle'] ?? '',
+                              ),
+                            ),
+                          );
+                          if (result == true && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Review submitted for the student',
+                                ),
+                                backgroundColor: Colors.teal,
+                              ),
+                            );
+                          }
+                        },
+                        icon: Icon(Icons.star_rate, color: Colors.amber),
+                        label: Text('Rate ${app['applicantName']}'),
+                      ),
+                    ],
                   ),
                 ),
             ],

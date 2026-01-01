@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/task_service.dart';
 import '../services/auth_service.dart';
+import 'client_profile_page.dart';
 import 'task_detail_page.dart';
 import 'users_list_page.dart';
 import 'my_applications_page.dart';
@@ -40,6 +41,22 @@ class _StudentHomePageState extends State<StudentHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.account_circle),
+          onPressed: () {
+            final currentUser = FirebaseAuth.instance.currentUser;
+            if (currentUser != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ClientProfilePage(clientId: currentUser.uid),
+                ),
+              );
+            }
+          },
+          tooltip: 'My Profile',
+        ),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,

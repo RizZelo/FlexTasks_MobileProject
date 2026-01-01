@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/user_service.dart';
 import '../services/task_service.dart';
+import '../services/review_service.dart';
 import 'chat_page.dart';
 
 class ClientProfilePage extends StatefulWidget {
@@ -16,6 +17,7 @@ class ClientProfilePage extends StatefulWidget {
 class _ClientProfilePageState extends State<ClientProfilePage> {
   final UserService _userService = UserService();
   final TaskService _taskService = TaskService();
+  final ReviewService _reviewService = ReviewService();
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +44,8 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
           }
 
           final user = snapshot.data!.data() as Map<String, dynamic>;
+          final double ratingAverage = (user['ratingAverage'] ?? 0).toDouble();
+          final int ratingCount = (user['ratingCount'] ?? 0) as int;
 
           return CustomScrollView(
             slivers: [
@@ -261,6 +265,119 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                       ),
                       SizedBox(height: 24),
 
+                      // Ratings & Feedback
+                      Text(
+                        'Ratings & Feedback',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: ratingCount > 0
+                              ? Row(
+                                  children: [
+                                    _buildRatingStars(ratingAverage),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      ratingAverage.toStringAsFixed(1),
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      '($ratingCount reviews)',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  'No reviews yet',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      StreamBuilder<QuerySnapshot>(
+                        stream: _reviewService.getReviewsForUser(
+                          widget.clientId,
+                        ),
+                        builder: (context, reviewSnapshot) {
+                          if (reviewSnapshot.hasError) {
+                            return Text('Error loading reviews');
+                          }
+
+                          if (reviewSnapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Center(child: CircularProgressIndicator());
+                          }
+
+                          if (!reviewSnapshot.hasData ||
+                              reviewSnapshot.data!.docs.isEmpty) {
+                            return SizedBox.shrink();
+                          }
+
+                          final reviews = reviewSnapshot.data!.docs.take(5);
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ...reviews.map((doc) {
+                                final data = doc.data() as Map<String, dynamic>;
+                                final int rating = (data['rating'] ?? 0) as int;
+                                final String comment = data['comment'] ?? '';
+                                final String reviewerName =
+                                    data['reviewerName'] ?? 'User';
+
+                                return Card(
+                                  margin: EdgeInsets.only(bottom: 8),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              reviewerName,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            _buildRatingStars(
+                                              rating.toDouble(),
+                                            ),
+                                          ],
+                                        ),
+                                        if (comment.isNotEmpty) ...[
+                                          SizedBox(height: 8),
+                                          Text(
+                                            comment,
+                                            style: TextStyle(
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ],
+                          );
+                        },
+                      ),
+                      SizedBox(height: 24),
+
                       // Member Info
                       Text(
                         'Member Information',
@@ -467,6 +584,20 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
           color: Colors.grey[800],
         ),
       ),
+    );
+  }
+
+  Widget _buildRatingStars(double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        final starIndex = index + 1;
+        return Icon(
+          starIndex <= rating ? Icons.star : Icons.star_border,
+          color: Colors.amber,
+          size: 18,
+        );
+      }),
     );
   }
 
