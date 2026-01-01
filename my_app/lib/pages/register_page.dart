@@ -20,6 +20,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String _selectedRole = 'student'; // Default role
 
   @override
   void dispose() {
@@ -41,23 +42,21 @@ class _RegisterPageState extends State<RegisterPage> {
         password: _passwordController.text,
         name: _nameController.text.trim(),
       );
-      
-      // Créer le profil utilisateur dans Firestore
+
+      // Créer le profil utilisateur dans Firestore avec le rôle
       if (userCredential != null && userCredential.user != null) {
         await _userService.createUserProfile(
           uid: userCredential.user!.uid,
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
+          role: _selectedRole,
         );
       }
       // Navigation automatique via StreamBuilder
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -83,30 +82,154 @@ class _RegisterPageState extends State<RegisterPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Logo ou Icon
-                  const Icon(
-                    Icons.person_add,
-                    size: 80,
-                    color: Colors.blue,
-                  ),
+                  const Icon(Icons.person_add, size: 80, color: Colors.teal),
                   const SizedBox(height: 24),
-                  
+
                   // Titre
                   const Text(
                     'Créer un compte',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Rejoignez FlexTask Chat',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
+                    'Rejoignez FlexTask',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                   const SizedBox(height: 32),
+
+                  // Role Selection
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Je suis un(e):',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() => _selectedRole = 'student');
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: _selectedRole == 'student'
+                                        ? Colors.teal
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _selectedRole == 'student'
+                                          ? Colors.teal
+                                          : Colors.grey[300]!,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.school,
+                                        size: 40,
+                                        color: _selectedRole == 'student'
+                                            ? Colors.white
+                                            : Colors.teal,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Étudiant',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: _selectedRole == 'student'
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Trouver des tâches',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: _selectedRole == 'student'
+                                              ? Colors.white70
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() => _selectedRole = 'client');
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: _selectedRole == 'client'
+                                        ? Colors.teal
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _selectedRole == 'client'
+                                          ? Colors.teal
+                                          : Colors.grey[300]!,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.business,
+                                        size: 40,
+                                        color: _selectedRole == 'client'
+                                            ? Colors.white
+                                            : Colors.teal,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Client',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: _selectedRole == 'client'
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Publier des tâches',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: _selectedRole == 'client'
+                                              ? Colors.white70
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
                   // Nom
                   TextFormField(
@@ -201,7 +324,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         onPressed: () {
                           setState(
-                              () => _obscureConfirmPassword = !_obscureConfirmPassword);
+                            () => _obscureConfirmPassword =
+                                !_obscureConfirmPassword,
+                          );
                         },
                       ),
                       border: OutlineInputBorder(
@@ -227,7 +352,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Colors.teal,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -239,13 +364,16 @@ class _RegisterPageState extends State<RegisterPage> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
-                          : const Text(
-                              'S\'inscrire',
-                              style: TextStyle(fontSize: 16),
+                          : Text(
+                              _selectedRole == 'student'
+                                  ? 'S\'inscrire comme Étudiant'
+                                  : 'S\'inscrire comme Client',
+                              style: const TextStyle(fontSize: 16),
                             ),
                     ),
                   ),
