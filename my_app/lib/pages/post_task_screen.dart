@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/task_service.dart';
 // Removed import of TaskListScreen to avoid circular import with
 // `task_list_screen.dart`. We return to the previous screen using
 // Navigator.pop after posting instead.
@@ -21,6 +22,10 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _additionalReqController =
       TextEditingController();
+
+  // Task Service
+  final TaskService _taskService = TaskService();
+  bool _isLoading = false;
 
   // Selected category
   String _selectedCategory = 'Tutoring';
@@ -233,22 +238,28 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: () {
-                    // Save draft logic
-                    print('Draft saved');
-                  },
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          // Save draft logic
+                          print('Draft saved');
+                        },
                   child: Text('Save Draft'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    // Post job logic
-                    print('Task Posted: ${_titleController.text}');
-
-                    // Return to the previous screen (TaskListScreen) so we avoid
-                    // a circular import between the two pages.
-                    Navigator.pop(context);
-                  },
-                  child: Text('Post Job'),
+                  onPressed: _isLoading ? null : _postTask,
+                  child: _isLoading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text('Post Job'),
                 ),
               ],
             ),
@@ -256,5 +267,72 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _postTask() async {
+    // Validate inputs
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a task title'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (_descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a description'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _taskService.createTask(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        category: _selectedCategory,
+        budget: _budgetController.text.trim(),
+        duration: _durationController.text.trim(),
+        location: _locationController.text.trim(),
+        startDate: _startDateController.text.trim(),
+        additionalRequirements: _additionalReqController.text.trim(),
+        backgroundCheckRequired: _backgroundCheck,
+        experienceRequired: _experience,
+        referencesNeeded: _references,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Task posted successfully!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error posting task: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 }

@@ -13,12 +13,14 @@ class UserService {
     required String uid,
     required String name,
     required String email,
+    required String role, // 'client' or 'student'
   }) async {
     try {
       await _firestore.collection(usersCollection).doc(uid).set({
         'uid': uid,
         'name': name,
         'email': email,
+        'role': role,
         'createdAt': FieldValue.serverTimestamp(),
         'lastSeen': FieldValue.serverTimestamp(),
         'isOnline': true,
@@ -26,6 +28,27 @@ class UserService {
     } catch (e) {
       print('Erreur lors de la création du profil: $e');
       rethrow;
+    }
+  }
+
+  // Obtenir le rôle de l'utilisateur actuel
+  Future<String?> getCurrentUserRole() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      final doc = await _firestore
+          .collection(usersCollection)
+          .doc(user.uid)
+          .get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        return data['role'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print('Erreur lors de la récupération du rôle: $e');
+      return null;
     }
   }
 
@@ -47,7 +70,7 @@ class UserService {
   // Obtenir tous les utilisateurs sauf l'utilisateur actuel
   Stream<QuerySnapshot> getUsers() {
     final currentUserId = _auth.currentUser?.uid;
-    
+
     return _firestore
         .collection(usersCollection)
         .where('uid', isNotEqualTo: currentUserId)
@@ -63,7 +86,7 @@ class UserService {
   // Rechercher des utilisateurs par nom
   Stream<QuerySnapshot> searchUsers(String searchTerm) {
     final currentUserId = _auth.currentUser?.uid;
-    
+
     return _firestore
         .collection(usersCollection)
         .where('uid', isNotEqualTo: currentUserId)
@@ -77,7 +100,7 @@ class UserService {
     if (user == null) {
       throw Exception('Aucun utilisateur connecté');
     }
-    
+
     return _firestore.collection(usersCollection).doc(user.uid).snapshots();
   }
 }

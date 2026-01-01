@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'post_task_screen.dart';
 import 'users_list_page.dart';
+import 'student_home_page.dart';
+import 'task_detail_page.dart';
 import '../services/auth_service.dart';
+import '../services/task_service.dart';
 
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({Key? key}) : super(key: key);
@@ -15,30 +19,7 @@ class _TaskListScreenState extends State<TaskListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   TextEditingController _searchController = TextEditingController();
-
-  List<Map<String, dynamic>> allTasks = [
-    {
-      'title': 'Math Tutoring Needed',
-      'category': 'Tutoring',
-      'budget': '50',
-      'location': 'Downtown',
-      'status': 'active',
-    },
-    {
-      'title': 'Garden Cleanup',
-      'category': 'Gardening',
-      'budget': '100',
-      'location': 'Suburbs',
-      'status': 'completed',
-    },
-    {
-      'title': 'Dog Walking',
-      'category': 'Petcare',
-      'budget': '30',
-      'location': 'Park Area',
-      'status': 'active',
-    },
-  ];
+  final TaskService _taskService = TaskService();
 
   @override
   void initState() {
@@ -51,14 +32,6 @@ class _TaskListScreenState extends State<TaskListScreen>
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
-  }
-
-  List<Map<String, dynamic>> get activeTasks {
-    return allTasks.where((task) => task['status'] == 'active').toList();
-  }
-
-  List<Map<String, dynamic>> get completedTasks {
-    return allTasks.where((task) => task['status'] == 'completed').toList();
   }
 
   @override
@@ -78,6 +51,16 @@ class _TaskListScreenState extends State<TaskListScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => StudentHomePage()),
+              );
+            },
+            tooltip: 'Browse Tasks',
+          ),
           IconButton(
             icon: Icon(Icons.chat_bubble_outline),
             onPressed: () {
@@ -149,8 +132,8 @@ class _TaskListScreenState extends State<TaskListScreen>
                   unselectedLabelColor: Colors.white,
                   labelPadding: EdgeInsets.zero,
                   tabs: [
-                    Tab(text: 'Active (${activeTasks.length})'),
-                    Tab(text: 'Completed (${completedTasks.length})'),
+                    Tab(text: 'Active'),
+                    Tab(text: 'Completed'),
                   ],
                 ),
               ),
@@ -195,14 +178,65 @@ class _TaskListScreenState extends State<TaskListScreen>
           SizedBox(height: 10),
           // Task List with Tabs
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Active Tasks Tab
-                _buildTaskList(activeTasks),
-                // Completed Tasks Tab
-                _buildTaskList(completedTasks),
-              ],
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _taskService.getMyTasks(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 80,
+                          color: Colors.grey[300],
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'No tasks posted yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Tap "Add Task" to post your first task',
+                          style: TextStyle(color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final allTasks = snapshot.data!.docs;
+                final activeTasks = allTasks.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return data['status'] == 'active';
+                }).toList();
+                final completedTasks = allTasks.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return data['status'] == 'completed';
+                }).toList();
+
+                return TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Active Tasks Tab
+                    _buildTaskList(activeTasks),
+                    // Completed Tasks Tab
+                    _buildTaskList(completedTasks),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -210,7 +244,7 @@ class _TaskListScreenState extends State<TaskListScreen>
     );
   }
 
-  Widget _buildTaskList(List<Map<String, dynamic>> tasks) {
+  Widget _buildTaskList(List<QueryDocumentSnapshot> tasks) {
     if (tasks.isEmpty) {
       return Center(
         child: Column(
@@ -231,13 +265,14 @@ class _TaskListScreenState extends State<TaskListScreen>
       padding: EdgeInsets.all(16),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
-        final task = tasks[index];
-        return _buildTaskCard(task);
+        final taskDoc = tasks[index];
+        final task = taskDoc.data() as Map<String, dynamic>;
+        return _buildTaskCard(taskDoc.id, task);
       },
     );
   }
 
-  Widget _buildTaskCard(Map<String, dynamic> task) {
+  Widget _buildTaskCard(String taskId, Map<String, dynamic> task) {
     bool isCompleted = task['status'] == 'completed';
 
     return Card(
@@ -246,8 +281,12 @@ class _TaskListScreenState extends State<TaskListScreen>
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () {
-          // Navigate to task details (implement later)
-          print('Task tapped: ${task['title']}');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TaskDetailPage(taskId: taskId),
+            ),
+          );
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
@@ -301,7 +340,7 @@ class _TaskListScreenState extends State<TaskListScreen>
                   ),
                   SizedBox(width: 6),
                   Text(
-                    task['category'],
+                    task['category'] ?? 'Other',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   SizedBox(width: 20),
@@ -312,7 +351,7 @@ class _TaskListScreenState extends State<TaskListScreen>
                   ),
                   SizedBox(width: 6),
                   Text(
-                    task['location'],
+                    task['location'] ?? 'Not specified',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ],
@@ -325,7 +364,7 @@ class _TaskListScreenState extends State<TaskListScreen>
                     children: [
                       Icon(Icons.attach_money, size: 20, color: Colors.teal),
                       Text(
-                        '${task['budget']}',
+                        '${task['budget'] ?? '0'}',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -351,13 +390,19 @@ class _TaskListScreenState extends State<TaskListScreen>
                       IconButton(
                         icon: Icon(Icons.edit_outlined, color: Colors.blue),
                         onPressed: () {
-                          print('Edit task: ${task['title']}');
+                          // TODO: Implement edit task
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Edit feature coming soon')),
+                          );
                         },
                       ),
                       IconButton(
                         icon: Icon(Icons.delete_outline, color: Colors.red),
                         onPressed: () {
-                          print('Delete task: ${task['title']}');
+                          _showDeleteDialog(
+                            taskId,
+                            task['title'] ?? 'this task',
+                          );
                         },
                       ),
                     ],
@@ -367,6 +412,44 @@ class _TaskListScreenState extends State<TaskListScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showDeleteDialog(String taskId, String taskTitle) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Task'),
+        content: Text('Are you sure you want to delete "$taskTitle"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await _taskService.deleteTask(taskId);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Task deleted successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting task: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
