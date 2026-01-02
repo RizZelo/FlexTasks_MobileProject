@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/task_service.dart';
 import '../services/application_service.dart';
 import '../services/auth_service.dart';
+import '../services/chat_service.dart';
+import '../services/user_service.dart';
+import 'chat_page.dart';
 import 'client_profile_page.dart';
 import 'post_task_screen.dart';
 import 'task_applications_page.dart';
@@ -21,27 +26,169 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
   final TaskService _taskService = TaskService();
   final ApplicationService _applicationService = ApplicationService();
   late TabController _tabController;
+  final ChatService _chatService = ChatService();
+  StreamSubscription<QuerySnapshot>? _chatSubscription;
+  Timestamp? _lastSeenMessageTime;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _startChatListener();
   }
 
   @override
   void dispose() {
+    _chatSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
+  void _startChatListener() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    _chatSubscription = _chatService.getChats(currentUser.uid).listen((
+      snapshot,
+    ) {
+      if (!mounted) return;
+
+      if (_lastSeenMessageTime == null) {
+        Timestamp? maxTime;
+        for (var doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final ts = data['lastMessageTime'];
+          if (ts is Timestamp) {
+            if (maxTime == null || ts.compareTo(maxTime) > 0) {
+              maxTime = ts;
+            }
+          }
+        }
+        _lastSeenMessageTime = maxTime;
+        return;
+      }
+
+      Timestamp? newMax = _lastSeenMessageTime;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final ts = data['lastMessageTime'];
+
+        if (ts is! Timestamp) continue;
+        if (_lastSeenMessageTime != null &&
+            ts.compareTo(_lastSeenMessageTime!) <= 0) {
+          continue;
+        }
+
+        final lastSenderId = data['lastMessageSenderId'] as String?;
+        if (lastSenderId == null || lastSenderId == currentUser.uid) {
+          if (newMax == null || ts.compareTo(newMax) > 0) {
+            newMax = ts;
+          }
+          continue;
+        }
+
+        final participants = (data['participants'] as List<dynamic>? ?? [])
+            .map((e) => e.toString())
+            .toList();
+        String? otherUserId;
+        if (participants.length == 2) {
+          otherUserId = participants.firstWhere(
+            (id) => id != currentUser.uid,
+            orElse: () => currentUser.uid,
+          );
+          if (otherUserId == currentUser.uid) {
+            otherUserId = null;
+          }
+        }
+
+        final participantNames =
+            (data['participantNames'] as Map<String, dynamic>?) ?? {};
+        String? otherName;
+        if (otherUserId != null) {
+          otherName = participantNames[otherUserId]?.toString();
+        }
+
+        final lastMessage = data['lastMessage']?.toString() ?? '';
+
+        if (otherUserId != null) {
+          _showNewMessageSnackBar(
+            otherUserId: otherUserId,
+            otherName: otherName ?? 'New message',
+            preview: lastMessage,
+          );
+        }
+
+        if (newMax == null || ts.compareTo(newMax) > 0) {
+          newMax = ts;
+        }
+      }
+
+      _lastSeenMessageTime = newMax;
+    });
+  }
+
+  void _showNewMessageSnackBar({
+    required String otherUserId,
+    required String otherName,
+    required String preview,
+  }) {
+    if (!mounted) return;
+
+    final theme = Theme.of(context);
+    final messageText = preview.isNotEmpty ? preview : 'You have a new message';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'New message from $otherName: $messageText',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onInverseSurface,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        action: SnackBarAction(
+          label: 'Open',
+          onPressed: () async {
+            try {
+              final userDoc = await UserService().getUserById(otherUserId);
+              final data = userDoc.data() as Map<String, dynamic>? ?? {};
+              final email = data['email']?.toString() ?? '';
+
+              if (!mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    receiverId: otherUserId,
+                    receiverName: otherName,
+                    receiverEmail: email,
+                  ),
+                ),
+              );
+            } catch (e) {
+              // Ignore errors for now
+            }
+          },
+        ),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.account_circle),
+          icon: const Icon(Icons.account_circle),
           onPressed: () {
             final currentUser = FirebaseAuth.instance.currentUser;
             if (currentUser != null) {
@@ -59,8 +206,8 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.dashboard),
+          children: const [
+            Icon(Icons.dashboard_outlined),
             SizedBox(width: 8),
             Text('Client Dashboard'),
           ],
@@ -70,7 +217,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.chat_bubble_outline),
+            icon: const Icon(Icons.chat_bubble_outline),
             onPressed: () {
               Navigator.push(
                 context,
@@ -80,7 +227,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
             tooltip: 'Messages',
           ),
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: () async {
               await AuthService().signOut();
             },
@@ -89,29 +236,31 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
         ],
         flexibleSpace: Container(
           decoration: BoxDecoration(
-            color: Colors.teal,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+            color: colorScheme.primary,
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(24),
+            ),
           ),
         ),
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(60),
+          preferredSize: const Size.fromHeight(60),
           child: Container(
-            margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: colorScheme.onPrimary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(25),
             ),
             child: TabBar(
               controller: _tabController,
               indicator: BoxDecoration(
-                color: Colors.white,
+                color: colorScheme.onPrimary,
                 borderRadius: BorderRadius.circular(25),
               ),
               indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: Colors.teal,
-              unselectedLabelColor: Colors.white,
+              labelColor: colorScheme.primary,
+              unselectedLabelColor: colorScheme.onPrimary,
               labelPadding: EdgeInsets.zero,
-              tabs: [
+              tabs: const [
                 Tab(text: 'Active'),
                 Tab(text: 'Applications'),
                 Tab(text: 'Completed'),
@@ -124,7 +273,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
         children: [
           // Stats Row
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: StreamBuilder<QuerySnapshot>(
               stream: _taskService.getMyTasks(),
               builder: (context, taskSnapshot) {
@@ -215,9 +364,8 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
             MaterialPageRoute(builder: (context) => PostTaskScreen()),
           );
         },
-        backgroundColor: Colors.teal,
-        icon: Icon(Icons.add),
-        label: Text('Post Task'),
+        icon: const Icon(Icons.add),
+        label: const Text('Post Task'),
       ),
     );
   }
@@ -228,28 +376,31 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
     required String label,
     required Color color,
   }) {
+    final theme = Theme.of(context);
+
     return Expanded(
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           children: [
             Icon(icon, color: color, size: 20),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 18,
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
             Text(
               label,
-              style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: Colors.grey[600],
+              ),
             ),
           ],
         ),

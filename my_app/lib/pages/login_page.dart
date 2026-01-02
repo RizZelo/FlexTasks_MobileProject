@@ -36,18 +36,53 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      
+
       // Mettre à jour le statut en ligne
       await _userService.updateOnlineStatus(true);
-      
+
       // Navigation automatique via StreamBuilder
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userCredential = await _authService.signInWithGoogle();
+      if (userCredential == null) {
+        // Annulé par l'utilisateur
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      final user = userCredential.user;
+      if (user != null) {
+        final existing = await _userService.getUserById(user.uid);
+        if (!existing.exists) {
+          await _userService.createUserProfile(
+            uid: user.uid,
+            name: user.displayName ?? 'Utilisateur',
+            email: user.email ?? '',
+            // Par défaut, on considère un étudiant; la logique peut évoluer
+            role: 'student',
+          );
+        }
+
+        await _userService.updateOnlineStatus(true);
+      }
+      // Navigation gérée par AuthWrapper
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -57,6 +92,9 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -68,27 +106,34 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Logo ou Icon
-                  const Icon(
-                    Icons.chat_bubble,
-                    size: 100,
-                    color: Colors.blue,
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 600),
+                    tween: Tween(begin: 0.8, end: 1.0),
+                    curve: Curves.elasticOut,
+                    builder: (context, scale, child) {
+                      return Transform.scale(scale: scale, child: child);
+                    },
+                    child: Icon(
+                      Icons.work_outline,
+                      size: 100,
+                      color: colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Titre
-                  const Text(
-                    'FlexTask Chat',
-                    style: TextStyle(
-                      fontSize: 32,
+                  Text(
+                    'FlexTask',
+                    style: theme.textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Connectez-vous pour commencer',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: Colors.grey[600],
                     ),
                   ),
                   const SizedBox(height: 48),
@@ -97,12 +142,9 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Email',
-                      prefixIcon: const Icon(Icons.email),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -122,19 +164,16 @@ class _LoginPageState extends State<LoginPage> {
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Mot de passe',
-                      prefixIcon: const Icon(Icons.lock),
+                      prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
                         ),
                         onPressed: () {
                           setState(() => _obscurePassword = !_obscurePassword);
                         },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     validator: (value) {
@@ -152,42 +191,42 @@ class _LoginPageState extends State<LoginPage> {
                   // Bouton Connexion
                   SizedBox(
                     width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
+                    child: FilledButton(
                       onPressed: _isLoading ? null : _signIn,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                       child: _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                color: colorScheme.onPrimary,
                               ),
                             )
-                          : const Text(
-                              'Se connecter',
-                              style: TextStyle(fontSize: 16),
-                            ),
+                          : const Text('Se connecter'),
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Connexion avec Google
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _signInWithGoogle,
+                      icon: const Icon(Icons.login),
+                      label: const Text('Continuer avec Google'),
+                    ),
+                  ),
 
                   // Bouton Inscription
                   TextButton(
                     onPressed: () {
                       Navigator.pushNamed(context, '/register');
                     },
-                    child: const Text(
+                    child: Text(
                       'Pas de compte ? Inscrivez-vous',
-                      style: TextStyle(fontSize: 14),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.primary,
+                      ),
                     ),
                   ),
                 ],

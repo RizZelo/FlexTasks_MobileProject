@@ -74,25 +74,26 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final currentUser = _auth.currentUser;
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(child: Text('Please login')),
-      );
+      return const Scaffold(body: Center(child: Text('Please login')));
     }
 
     final chatId = _chatService.getChatId(currentUser.uid, widget.receiverId);
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.teal,
+        backgroundColor: colorScheme.primary,
         title: Row(
           children: [
             CircleAvatar(
-              backgroundColor: Colors.white,
+              backgroundColor: colorScheme.onPrimary,
               child: Text(
                 widget.receiverName[0].toUpperCase(),
-                style: const TextStyle(color: Colors.teal),
+                style: TextStyle(color: colorScheme.primary),
               ),
             ),
             const SizedBox(width: 12),
@@ -102,11 +103,15 @@ class _ChatPageState extends State<ChatPage> {
                 children: [
                   Text(
                     widget.receiverName,
-                    style: const TextStyle(fontSize: 16),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onPrimary,
+                    ),
                   ),
                   Text(
                     widget.receiverEmail,
-                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onPrimary.withOpacity(0.8),
+                    ),
                   ),
                 ],
               ),
@@ -134,12 +139,18 @@ class _ChatPageState extends State<ChatPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.chat_bubble_outline,
-                            size: 80, color: Colors.grey[300]),
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 80,
+                          color: Colors.grey[300],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No messages yet',
-                          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -160,18 +171,35 @@ class _ChatPageState extends State<ChatPage> {
 
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   itemCount: snapshot.data!.docs.length,
                   itemBuilder: (context, index) {
                     final doc = snapshot.data!.docs[index];
                     final data = doc.data() as Map<String, dynamic>;
                     final isMe = data['senderId'] == currentUser.uid;
 
-                    return _buildMessageBubble(
-                      message: data['content'],
-                      isMe: isMe,
-                      timestamp: data['timestamp'] as Timestamp?,
-                      senderName: data['senderName'],
+                    return TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      tween: Tween(begin: 0.95, end: 1),
+                      builder: (context, scale, child) {
+                        return Transform.scale(
+                          scale: scale,
+                          alignment: isMe
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: child,
+                        );
+                      },
+                      child: _buildMessageBubble(
+                        message: data['content'],
+                        isMe: isMe,
+                        timestamp: data['timestamp'] as Timestamp?,
+                        senderName: data['senderName'],
+                      ),
                     );
                   },
                 );
@@ -180,51 +208,31 @@ class _ChatPageState extends State<ChatPage> {
           ),
 
           // Message input
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, -3),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Type a message...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide.none,
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(
+                        hintText: 'Type a message...',
                       ),
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
+                      maxLines: null,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
                     ),
-                    maxLines: null,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
                   ),
-                ),
-                const SizedBox(width: 8),
-                CircleAvatar(
-                  backgroundColor: Colors.teal,
-                  child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
                     onPressed: _sendMessage,
+                    icon: const Icon(Icons.send),
+                    label: const Text('Send'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -241,49 +249,54 @@ class _ChatPageState extends State<ChatPage> {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.7,
         ),
         decoration: BoxDecoration(
-          color: isMe ? Colors.teal : Colors.grey[300],
+          color: isMe
+              ? Theme.of(context).colorScheme.surfaceVariant
+              : Theme.of(context).colorScheme.primary,
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
+            topLeft: Radius.circular(isMe ? 20 : 8),
+            topRight: Radius.circular(isMe ? 8 : 20),
+            bottomLeft: const Radius.circular(20),
+            bottomRight: const Radius.circular(20),
           ),
         ),
         child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             if (!isMe)
               Text(
                 senderName,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.bold,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onPrimary.withOpacity(0.9),
                 ),
               ),
             const SizedBox(height: 4),
             Text(
               message,
-              style: TextStyle(
-                color: isMe ? Colors.white : Colors.black87,
-                fontSize: 15,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isMe
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : Theme.of(context).colorScheme.onPrimary,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              timestamp != null
-                  ? _formatTimestamp(timestamp)
-                  : 'Sending...',
-              style: TextStyle(
-                fontSize: 10,
-                color: isMe ? Colors.white70 : Colors.grey[600],
+              timestamp != null ? _formatTimestamp(timestamp) : 'Sending...',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: isMe
+                    ? Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.7)
+                    : Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
               ),
             ),
           ],

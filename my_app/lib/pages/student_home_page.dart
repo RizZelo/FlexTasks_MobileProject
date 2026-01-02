@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/task_service.dart';
 import '../services/auth_service.dart';
+import '../services/connection_service.dart';
+import '../services/chat_service.dart';
+import '../services/user_service.dart';
+import 'chat_page.dart';
 import 'client_profile_page.dart';
 import 'task_detail_page.dart';
 import 'users_list_page.dart';
@@ -20,6 +26,12 @@ class _StudentHomePageState extends State<StudentHomePage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedCategory = 'All';
+  final ConnectionService _connectionService = ConnectionService();
+  Set<String> _priorityClientIds = {};
+  bool _isLoadingConnections = true;
+  final ChatService _chatService = ChatService();
+  StreamSubscription<QuerySnapshot>? _chatSubscription;
+  Timestamp? _lastSeenMessageTime;
 
   final List<String> _categories = [
     'All',
@@ -32,17 +44,181 @@ class _StudentHomePageState extends State<StudentHomePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadConnections();
+    _startChatListener();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _chatSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadConnections() async {
+    try {
+      final ids = await _connectionService.getAcceptedConnectionUserIds();
+      setState(() {
+        _priorityClientIds = ids;
+        _isLoadingConnections = false;
+      });
+    } catch (e) {
+      print('Erreur lors du chargement des connexions: $e');
+      setState(() {
+        _priorityClientIds = {};
+        _isLoadingConnections = false;
+      });
+    }
+  }
+
+  void _startChatListener() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    _chatSubscription = _chatService.getChats(currentUser.uid).listen((
+      snapshot,
+    ) {
+      if (!mounted) return;
+
+      // On first snapshot, establish baseline so we don't notify for old messages
+      if (_lastSeenMessageTime == null) {
+        Timestamp? maxTime;
+        for (var doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final ts = data['lastMessageTime'];
+          if (ts is Timestamp) {
+            if (maxTime == null || ts.compareTo(maxTime) > 0) {
+              maxTime = ts;
+            }
+          }
+        }
+        _lastSeenMessageTime = maxTime;
+        return;
+      }
+
+      Timestamp? newMax = _lastSeenMessageTime;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final ts = data['lastMessageTime'];
+
+        if (ts is! Timestamp) continue;
+        if (_lastSeenMessageTime != null &&
+            ts.compareTo(_lastSeenMessageTime!) <= 0) {
+          continue;
+        }
+
+        final lastSenderId = data['lastMessageSenderId'] as String?;
+        if (lastSenderId == null || lastSenderId == currentUser.uid) {
+          if (newMax == null || ts.compareTo(newMax) > 0) {
+            newMax = ts;
+          }
+          continue;
+        }
+
+        final participants = (data['participants'] as List<dynamic>? ?? [])
+            .map((e) => e.toString())
+            .toList();
+        String? otherUserId;
+        if (participants.length == 2) {
+          otherUserId = participants.firstWhere(
+            (id) => id != currentUser.uid,
+            orElse: () => currentUser.uid,
+          );
+          if (otherUserId == currentUser.uid) {
+            otherUserId = null;
+          }
+        }
+
+        final participantNames =
+            (data['participantNames'] as Map<String, dynamic>?) ?? {};
+        String? otherName;
+        if (otherUserId != null) {
+          otherName = participantNames[otherUserId]?.toString();
+        }
+
+        final lastMessage = data['lastMessage']?.toString() ?? '';
+
+        if (otherUserId != null) {
+          _showNewMessageSnackBar(
+            otherUserId: otherUserId,
+            otherName: otherName ?? 'New message',
+            preview: lastMessage,
+          );
+        }
+
+        if (newMax == null || ts.compareTo(newMax) > 0) {
+          newMax = ts;
+        }
+      }
+
+      _lastSeenMessageTime = newMax;
+    });
+  }
+
+  void _showNewMessageSnackBar({
+    required String otherUserId,
+    required String otherName,
+    required String preview,
+  }) {
+    if (!mounted) return;
+
+    final theme = Theme.of(context);
+    final messageText = preview.isNotEmpty ? preview : 'You have a new message';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'New message from $otherName: $messageText',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onInverseSurface,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        action: SnackBarAction(
+          label: 'Open',
+          onPressed: () async {
+            try {
+              final userDoc = await UserService().getUserById(otherUserId);
+              final data = userDoc.data() as Map<String, dynamic>? ?? {};
+              final email = data['email']?.toString() ?? '';
+
+              // Lazy import to avoid circular dependency in analysis; ChatPage is in pages
+              if (!mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    receiverId: otherUserId,
+                    receiverName: otherName,
+                    receiverEmail: email,
+                  ),
+                ),
+              );
+            } catch (e) {
+              // If something goes wrong, we just ignore for now
+            }
+          },
+        ),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.account_circle),
+          icon: const Icon(Icons.account_circle),
           onPressed: () {
             final currentUser = FirebaseAuth.instance.currentUser;
             if (currentUser != null) {
@@ -60,7 +236,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
-          children: [
+          children: const [
             Icon(Icons.work_outline),
             SizedBox(width: 8),
             Text('Find Tasks'),
@@ -71,7 +247,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.assignment_outlined),
+            icon: const Icon(Icons.assignment_outlined),
             onPressed: () {
               Navigator.push(
                 context,
@@ -81,7 +257,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
             tooltip: 'My Applications',
           ),
           IconButton(
-            icon: Icon(Icons.chat_bubble_outline),
+            icon: const Icon(Icons.chat_bubble_outline),
             onPressed: () {
               Navigator.push(
                 context,
@@ -91,7 +267,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
             tooltip: 'Messages',
           ),
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: () async {
               await AuthService().signOut();
             },
@@ -100,39 +276,38 @@ class _StudentHomePageState extends State<StudentHomePage> {
         ],
         flexibleSpace: Container(
           decoration: BoxDecoration(
-            color: Colors.teal,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+            color: colorScheme.primary,
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(24),
+            ),
           ),
         ),
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(140),
+          preferredSize: const Size.fromHeight(140),
           child: Column(
             children: [
               // Welcome Message
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
                   'Find the perfect task for you',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onPrimary,
+                  ),
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 8),
               // Search Bar
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search tasks...',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    prefixIcon: Icon(Icons.search, color: Colors.grey),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(vertical: 0),
+                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -141,26 +316,26 @@ class _StudentHomePageState extends State<StudentHomePage> {
                   },
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 8),
             ],
           ),
         ),
       ),
       body: Column(
         children: [
-          SizedBox(height: 10),
+          const SizedBox(height: 8),
           // Category Filter
-          Container(
+          SizedBox(
             height: 50,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
                 final category = _categories[index];
                 final isSelected = _selectedCategory == category;
                 return Padding(
-                  padding: EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
                     label: Text(category),
                     selected: isSelected,
@@ -169,10 +344,12 @@ class _StudentHomePageState extends State<StudentHomePage> {
                         _selectedCategory = category;
                       });
                     },
-                    selectedColor: Colors.teal[100],
-                    checkmarkColor: Colors.teal,
+                    selectedColor: colorScheme.primaryContainer,
+                    checkmarkColor: colorScheme.onPrimaryContainer,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.teal : Colors.grey[700],
+                      color: isSelected
+                          ? colorScheme.onPrimaryContainer
+                          : Colors.grey[700],
                       fontWeight: isSelected
                           ? FontWeight.bold
                           : FontWeight.normal,
@@ -182,17 +359,14 @@ class _StudentHomePageState extends State<StudentHomePage> {
               },
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 8),
           // Section Title
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Available Tasks',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+                Text('Available Tasks', style: theme.textTheme.titleLarge),
                 StreamBuilder<QuerySnapshot>(
                   stream: _taskService.getAllActiveTasks(),
                   builder: (context, snapshot) {
@@ -201,14 +375,16 @@ class _StudentHomePageState extends State<StudentHomePage> {
                         : 0;
                     return Text(
                       '$count tasks',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
                     );
                   },
                 ),
               ],
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 8),
           // Tasks List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
@@ -219,7 +395,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -232,7 +408,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
                           size: 80,
                           color: Colors.grey[300],
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Text(
                           'No tasks available',
                           style: TextStyle(
@@ -240,7 +416,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
                             color: Colors.grey[600],
                           ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           'Check back later for new opportunities',
                           style: TextStyle(color: Colors.grey[500]),
@@ -277,6 +453,34 @@ class _StudentHomePageState extends State<StudentHomePage> {
                   return matchesSearch && matchesCategory;
                 }).toList();
 
+                // Prioritize tasks from connected clients
+                if (_priorityClientIds.isNotEmpty) {
+                  tasks.sort((a, b) {
+                    final dataA = a.data() as Map<String, dynamic>;
+                    final dataB = b.data() as Map<String, dynamic>;
+                    final clientA = dataA['clientId'] as String? ?? '';
+                    final clientB = dataB['clientId'] as String? ?? '';
+
+                    final isAFromPriority = _priorityClientIds.contains(
+                      clientA,
+                    );
+                    final isBFromPriority = _priorityClientIds.contains(
+                      clientB,
+                    );
+
+                    if (isAFromPriority == isBFromPriority) {
+                      final tsA = dataA['createdAt'];
+                      final tsB = dataB['createdAt'];
+                      if (tsA is Timestamp && tsB is Timestamp) {
+                        return tsB.compareTo(tsA); // newer first
+                      }
+                      return 0;
+                    }
+
+                    return isAFromPriority ? -1 : 1;
+                  });
+                }
+
                 if (tasks.isEmpty) {
                   return Center(
                     child: Column(
@@ -287,7 +491,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
                           size: 60,
                           color: Colors.grey[300],
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Text(
                           'No tasks match your search',
                           style: TextStyle(
@@ -301,7 +505,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
                 }
 
                 return ListView.builder(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   itemCount: tasks.length,
                   itemBuilder: (context, index) {
                     final taskDoc = tasks[index];
@@ -318,13 +522,13 @@ class _StudentHomePageState extends State<StudentHomePage> {
   }
 
   Widget _buildTaskCard(String taskId, Map<String, dynamic> task) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final currentUser = FirebaseAuth.instance.currentUser;
     final isOwnTask = currentUser?.uid == task['clientId'];
 
     return Card(
-      margin: EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -336,7 +540,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -347,38 +551,39 @@ class _StudentHomePageState extends State<StudentHomePage> {
                   Expanded(
                     child: Text(
                       task['title'] ?? 'Untitled Task',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: theme.textTheme.titleMedium,
                     ),
                   ),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.teal[50],
+                      color: colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       task['category'] ?? 'Other',
-                      style: TextStyle(
-                        color: Colors.teal[800],
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onPrimaryContainer,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
                       ),
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               // Description
               Text(
                 task['description'] ?? '',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.grey[600]),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               // Info Row
               Row(
                 children: [
@@ -387,25 +592,29 @@ class _StudentHomePageState extends State<StudentHomePage> {
                     size: 16,
                     color: Colors.grey[600],
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
                     task['location'] ?? 'Not specified',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Icon(
                     Icons.schedule_outlined,
                     size: 16,
                     color: Colors.grey[600],
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
                     task['duration'] ?? 'Flexible',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               // Footer Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -413,13 +622,16 @@ class _StudentHomePageState extends State<StudentHomePage> {
                   // Budget
                   Row(
                     children: [
-                      Icon(Icons.attach_money, size: 20, color: Colors.teal),
+                      Icon(
+                        Icons.attach_money,
+                        size: 20,
+                        color: colorScheme.primary,
+                      ),
                       Text(
                         '${task['budget'] ?? '0'}',
-                        style: TextStyle(
-                          fontSize: 18,
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.teal,
+                          color: colorScheme.primary,
                         ),
                       ),
                     ],
@@ -429,25 +641,30 @@ class _StudentHomePageState extends State<StudentHomePage> {
                     children: [
                       CircleAvatar(
                         radius: 12,
-                        backgroundColor: Colors.teal[100],
+                        backgroundColor: colorScheme.primaryContainer,
                         child: Text(
                           (task['clientName'] ?? 'U')[0].toUpperCase(),
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.teal[800],
+                            color: colorScheme.onPrimaryContainer,
                           ),
                         ),
                       ),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Text(
                         task['clientName'] ?? 'Unknown',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
                   // Applications count
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey[100],
                       borderRadius: BorderRadius.circular(12),
@@ -459,12 +676,11 @@ class _StudentHomePageState extends State<StudentHomePage> {
                           size: 16,
                           color: Colors.grey[600],
                         ),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
                           '${task['applicationsCount'] ?? 0}',
-                          style: TextStyle(
+                          style: theme.textTheme.labelSmall?.copyWith(
                             color: Colors.grey[600],
-                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -475,18 +691,20 @@ class _StudentHomePageState extends State<StudentHomePage> {
               // Own task indicator
               if (isOwnTask)
                 Padding(
-                  padding: EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.only(top: 8),
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.orange[50],
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       'Your task',
-                      style: TextStyle(
+                      style: theme.textTheme.labelSmall?.copyWith(
                         color: Colors.orange[800],
-                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
