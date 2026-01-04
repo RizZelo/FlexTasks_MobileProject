@@ -174,4 +174,57 @@ class TaskService {
       print('Erreur lors de l\'incrémentation des candidatures: $e');
     }
   }
+
+  // Marquer une tâche comme en cours
+  Future<void> markTaskAsInProgress(String taskId) async {
+    try {
+      await _firestore.collection(tasksCollection).doc(taskId).update({
+        'status': 'in_progress',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Erreur lors de la mise à jour du statut: $e');
+      rethrow;
+    }
+  }
+
+  // Marquer une tâche comme terminée
+  Future<void> markTaskAsCompleted(String taskId) async {
+    try {
+      await _firestore.collection(tasksCollection).doc(taskId).update({
+        'status': 'completed',
+        'completedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Erreur lors de la mise à jour du statut: $e');
+      rethrow;
+    }
+  }
+
+  // Annuler une tâche
+  Future<void> cancelTask(String taskId) async {
+    try {
+      await _firestore.collection(tasksCollection).doc(taskId).update({
+        'status': 'cancelled',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Erreur lors de l\'annulation de la tâche: $e');
+      rethrow;
+    }
+  }
+
+  // Obtenir les tâches par statut
+  Stream<QuerySnapshot> getTasksByStatus(String status) {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return const Stream.empty();
+    }
+    return _firestore
+        .collection(tasksCollection)
+        .where('clientId', isEqualTo: user.uid)
+        .where('status', isEqualTo: status)
+        .snapshots();
+  }
 }

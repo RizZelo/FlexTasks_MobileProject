@@ -96,6 +96,7 @@ class _LoginPageState extends State<LoginPage> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -105,38 +106,37 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo ou Icon
-                  TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 600),
-                    tween: Tween(begin: 0.8, end: 1.0),
-                    curve: Curves.elasticOut,
-                    builder: (context, scale, child) {
-                      return Transform.scale(scale: scale, child: child);
-                    },
+                  // Logo Container
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
                     child: Icon(
-                      Icons.work_outline,
-                      size: 100,
+                      Icons.work_rounded,
+                      size: 64,
                       color: colorScheme.primary,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-                  // Titre
+                  // Title
                   Text(
-                    'FlexTask',
-                    style: theme.textTheme.headlineLarge?.copyWith(
+                    'FlexTasks',
+                    style: theme.textTheme.displayMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Connectez-vous pour commencer',
+                    'Sign in to continue',
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey[600],
+                      color: const Color(0xFF64748B),
                     ),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 40),
 
                   // Email
                   TextFormField(
@@ -144,26 +144,28 @@ class _LoginPageState extends State<LoginPage> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: 'Email',
+                      hintText: 'Enter your email',
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Entrez votre email';
+                        return 'Please enter your email';
                       }
                       if (!value.contains('@')) {
-                        return 'Email invalide';
+                        return 'Invalid email address';
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // Mot de passe
+                  // Password
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      labelText: 'Mot de passe',
+                      labelText: 'Password',
+                      hintText: 'Enter your password',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -178,56 +180,98 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Entrez votre mot de passe';
+                        return 'Please enter your password';
                       }
                       if (value.length < 6) {
-                        return 'Minimum 6 caractères';
+                        return 'Minimum 6 characters';
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 24),
 
-                  // Bouton Connexion
+                  // Sign In Button
                   SizedBox(
                     width: double.infinity,
+                    height: 52,
                     child: FilledButton(
                       onPressed: _isLoading ? null : _signIn,
                       child: _isLoading
-                          ? SizedBox(
+                          ? const SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: colorScheme.onPrimary,
+                                color: Colors.white,
                               ),
                             )
-                          : const Text('Se connecter'),
+                          : const Text('Sign In'),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // Connexion avec Google
+                  // Divider
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.grey[300])),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'or',
+                          style: TextStyle(color: Colors.grey[500]),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: Colors.grey[300])),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Google Sign In
                   SizedBox(
                     width: double.infinity,
+                    height: 52,
                     child: OutlinedButton.icon(
                       onPressed: _isLoading ? null : _signInWithGoogle,
-                      icon: const Icon(Icons.login),
-                      label: const Text('Continuer avec Google'),
+                      icon: Image.network(
+                        'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+                        height: 20,
+                        width: 20,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.g_mobiledata, size: 24),
+                      ),
+                      label: const Text('Continue with Google'),
                     ),
                   ),
+                  const SizedBox(height: 24),
 
-                  // Bouton Inscription
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/register');
-                    },
-                    child: Text(
-                      'Pas de compte ? Inscrivez-vous',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.primary,
+                  // Register Link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF64748B),
+                        ),
                       ),
-                    ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/register');
+                        },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Sign Up',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -218,7 +218,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.account_circle),
+          icon: const Icon(Icons.person_outline, size: 28),
           onPressed: () {
             final currentUser = FirebaseAuth.instance.currentUser;
             if (currentUser != null) {
@@ -233,15 +233,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
           },
           tooltip: 'My Profile',
         ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.work_outline),
-            SizedBox(width: 8),
-            Text('Find Tasks'),
-          ],
-        ),
+        title: const Text('Find Tasks'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -267,7 +259,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
             tooltip: 'Messages',
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout_rounded),
             onPressed: () async {
               await AuthService().signOut();
             },
@@ -276,14 +268,21 @@ class _StudentHomePageState extends State<StudentHomePage> {
         ],
         flexibleSpace: Container(
           decoration: BoxDecoration(
-            color: colorScheme.primary,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colorScheme.primary,
+                colorScheme.primary.withOpacity(0.8),
+              ],
+            ),
             borderRadius: const BorderRadius.vertical(
               bottom: Radius.circular(24),
             ),
           ),
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(140),
+          preferredSize: const Size.fromHeight(120),
           child: Column(
             children: [
               // Welcome Message
@@ -291,42 +290,55 @@ class _StudentHomePageState extends State<StudentHomePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
                   'Find the perfect task for you',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: colorScheme.onPrimary,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: Colors.white.withOpacity(0.9),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               // Search Bar
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 8,
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search tasks...',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
-                  },
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search tasks...',
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      prefixIcon: Icon(Icons.search_rounded, color: colorScheme.primary),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value.toLowerCase();
+                      });
+                    },
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
             ],
           ),
         ),
       ),
       body: Column(
         children: [
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           // Category Filter
           SizedBox(
-            height: 50,
+            height: 44,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -344,29 +356,31 @@ class _StudentHomePageState extends State<StudentHomePage> {
                         _selectedCategory = category;
                       });
                     },
-                    selectedColor: colorScheme.primaryContainer,
-                    checkmarkColor: colorScheme.onPrimaryContainer,
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? colorScheme.onPrimaryContainer
-                          : Colors.grey[700],
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                    backgroundColor: Colors.white,
+                    selectedColor: colorScheme.primary.withOpacity(0.12),
+                    checkmarkColor: colorScheme.primary,
+                    side: BorderSide(
+                      color: isSelected ? colorScheme.primary : const Color(0xFFE2E8F0),
                     ),
+                    labelStyle: TextStyle(
+                      color: isSelected ? colorScheme.primary : const Color(0xFF64748B),
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                 );
               },
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           // Section Title
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Available Tasks', style: theme.textTheme.titleLarge),
+                Text('Available Tasks', style: theme.textTheme.headlineSmall),
                 StreamBuilder<QuerySnapshot>(
                   stream: _taskService.getAllActiveTasks(),
                   builder: (context, snapshot) {
@@ -527,192 +541,226 @@ class _StudentHomePageState extends State<StudentHomePage> {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isOwnTask = currentUser?.uid == task['clientId'];
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TaskDetailPage(taskId: taskId),
-            ),
-          );
-        },
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      task['title'] ?? 'Untitled Task',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      task['category'] ?? 'Other',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TaskDetailPage(taskId: taskId),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task['title'] ?? 'Untitled Task',
+                            style: theme.textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 6),
+                          // Description
+                          Text(
+                            task['description'] ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // Description
-              Text(
-                task['description'] ?? '',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Info Row
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on_outlined,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    task['location'] ?? 'Not specified',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(
-                    Icons.schedule_outlined,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    task['duration'] ?? 'Flexible',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Footer Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Budget
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.attach_money,
-                        size: 20,
-                        color: colorScheme.primary,
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      Text(
-                        '${task['budget'] ?? '0'}',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      child: Text(
+                        task['category'] ?? 'Other',
+                        style: TextStyle(
                           color: colorScheme.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
-                  // Posted by
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 12,
-                        backgroundColor: colorScheme.primaryContainer,
-                        child: Text(
-                          (task['clientName'] ?? 'U')[0].toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onPrimaryContainer,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Info Row
+                Row(
+                  children: [
+                    _buildInfoTag(Icons.location_on_outlined, task['location'] ?? 'Not specified'),
+                    const SizedBox(width: 8),
+                    _buildInfoTag(Icons.schedule_outlined, task['duration'] ?? 'Flexible'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Footer Row
+                Row(
+                  children: [
+                    // Budget
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            '\$',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            '${task['budget'] ?? '0'}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    // Posted by
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          child: Text(
+                            (task['clientName'] ?? 'U')[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.primary,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        task['clientName'] ?? 'Unknown',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Applications count
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: 16,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 8),
                         Text(
-                          '${task['applicationsCount'] ?? 0}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: Colors.grey[600],
+                          task['clientName'] ?? 'Unknown',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              // Own task indicator
-              if (isOwnTask)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                    const SizedBox(width: 12),
+                    // Applications count
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.people_outline_rounded,
+                            size: 16,
+                            color: Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${task['applicationsCount'] ?? 0}',
+                            style: const TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.orange[50],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Your task',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: Colors.orange[800],
-                        fontWeight: FontWeight.w500,
+                  ],
+                ),
+                // Own task indicator
+                if (isOwnTask)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFCD34D).withOpacity(0.5)),
+                      ),
+                      child: const Text(
+                        'Your task',
+                        style: TextStyle(
+                          color: Color(0xFFB45309),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoTag(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF64748B)),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Color(0xFF64748B),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

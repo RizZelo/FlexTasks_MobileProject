@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/application_service.dart';
+import '../main.dart';
 import 'review_page.dart';
 import 'task_detail_page.dart';
 
@@ -31,14 +32,17 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('My Applications'),
-        backgroundColor: Colors.teal,
+        title: const Text('My Applications'),
+        backgroundColor: AppColors.primary,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
-          tabs: [
+          indicatorWeight: 3,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Accepted'),
             Tab(text: 'Rejected'),
@@ -53,7 +57,9 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -64,17 +70,21 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                   Icon(
                     Icons.assignment_outlined,
                     size: 80,
-                    color: Colors.grey[300],
+                    color: AppColors.textSecondary.withOpacity(0.5),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'No applications yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Start applying to tasks!',
-                    style: TextStyle(color: Colors.grey[500]),
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -82,25 +92,32 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
           }
 
           final allApplications = snapshot.data!.docs;
+          
+          // Sort applications by createdAt (most recent first)
+          allApplications.sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>;
+            final bData = b.data() as Map<String, dynamic>;
+            final aTime = aData['createdAt'] as Timestamp?;
+            final bTime = bData['createdAt'] as Timestamp?;
+            
+            if (aTime == null && bTime == null) return 0;
+            if (aTime == null) return 1;
+            if (bTime == null) return -1;
+            
+            return bTime.compareTo(aTime);
+          });
+          
           final pendingApps = allApplications
-              .where(
-                (doc) =>
-                    (doc.data() as Map<String, dynamic>)['status'] == 'pending',
-              )
+              .where((doc) =>
+                  (doc.data() as Map<String, dynamic>)['status'] == 'pending')
               .toList();
           final acceptedApps = allApplications
-              .where(
-                (doc) =>
-                    (doc.data() as Map<String, dynamic>)['status'] ==
-                    'accepted',
-              )
+              .where((doc) =>
+                  (doc.data() as Map<String, dynamic>)['status'] == 'accepted')
               .toList();
           final rejectedApps = allApplications
-              .where(
-                (doc) =>
-                    (doc.data() as Map<String, dynamic>)['status'] ==
-                    'rejected',
-              )
+              .where((doc) =>
+                  (doc.data() as Map<String, dynamic>)['status'] == 'rejected')
               .toList();
 
           return TabBarView(
@@ -127,17 +144,21 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
           children: [
             Icon(
               status == 'pending'
-                  ? Icons.hourglass_empty
+                  ? Icons.hourglass_empty_rounded
                   : status == 'accepted'
-                  ? Icons.check_circle_outline
-                  : Icons.cancel_outlined,
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.cancel_outlined,
               size: 60,
-              color: Colors.grey[300],
+              color: AppColors.textSecondary.withOpacity(0.5),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
-              'No ${status} applications',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              'No $status applications',
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -145,7 +166,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       itemCount: applications.length,
       itemBuilder: (context, index) {
         final app = applications[index].data() as Map<String, dynamic>;
@@ -157,25 +178,71 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   Widget _buildApplicationCard(String appId, Map<String, dynamic> app) {
     Color statusColor;
     IconData statusIcon;
+    final isAccepted = app['status'] == 'accepted';
 
     switch (app['status']) {
       case 'accepted':
-        statusColor = Colors.green;
-        statusIcon = Icons.check_circle;
+        statusColor = AppColors.success;
+        statusIcon = Icons.check_circle_rounded;
         break;
       case 'rejected':
-        statusColor = Colors.red;
-        statusIcon = Icons.cancel;
+        statusColor = AppColors.error;
+        statusIcon = Icons.cancel_rounded;
         break;
       default:
-        statusColor = Colors.orange;
-        statusIcon = Icons.pending;
+        statusColor = AppColors.warning;
+        statusIcon = Icons.pending_rounded;
     }
 
-    return Card(
-      margin: EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    // For accepted applications, fetch task status to show completion
+    if (isAccepted) {
+      return StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('tasks')
+            .doc(app['taskId'])
+            .snapshots(),
+        builder: (context, taskSnapshot) {
+          String? taskStatus;
+          if (taskSnapshot.hasData && taskSnapshot.data!.exists) {
+            final taskData = taskSnapshot.data!.data() as Map<String, dynamic>;
+            taskStatus = taskData['status'];
+          }
+          
+          return _buildApplicationCardContent(
+            appId, 
+            app, 
+            statusColor, 
+            statusIcon, 
+            taskStatus: taskStatus,
+          );
+        },
+      );
+    }
+
+    return _buildApplicationCardContent(appId, app, statusColor, statusIcon);
+  }
+
+  Widget _buildApplicationCardContent(
+    String appId, 
+    Map<String, dynamic> app, 
+    Color statusColor, 
+    IconData statusIcon, 
+    {String? taskStatus}
+  ) {
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -187,7 +254,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -201,26 +268,31 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(statusIcon, size: 16, color: statusColor),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
                           app['status']?.toUpperCase() ?? 'PENDING',
                           style: TextStyle(
                             color: statusColor,
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontSize: 11,
                           ),
                         ),
                       ],
@@ -228,42 +300,114 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                   ),
                 ],
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 14),
+
+              // Show task completion status for accepted applications
+              if (app['status'] == 'accepted' && taskStatus != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: taskStatus == 'completed' 
+                        ? AppColors.success.withOpacity(0.1)
+                        : AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: taskStatus == 'completed'
+                          ? AppColors.success.withOpacity(0.3)
+                          : AppColors.primary.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        taskStatus == 'completed' 
+                            ? Icons.celebration_rounded
+                            : Icons.work_outline_rounded,
+                        size: 20,
+                        color: taskStatus == 'completed' 
+                            ? AppColors.success
+                            : AppColors.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          taskStatus == 'completed'
+                              ? '🎉 Task completed! Great job!'
+                              : taskStatus == 'in_progress'
+                                  ? '⚡ Work in progress...'
+                                  : 'Task status: $taskStatus',
+                          style: TextStyle(
+                            color: taskStatus == 'completed' 
+                                ? AppColors.success
+                                : AppColors.primary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
 
               // Client Info
               Row(
                 children: [
                   CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.teal[100],
+                    radius: 18,
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
                     child: Text(
                       (app['clientName'] ?? 'U')[0].toUpperCase(),
-                      style: TextStyle(fontSize: 14, color: Colors.teal[800]),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Text(
                     'Posted by ${app['clientName'] ?? 'Unknown'}',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-
-              // Budget
-              Row(
-                children: [
-                  Icon(Icons.attach_money, size: 18, color: Colors.teal),
-                  Text(
-                    'Your bid: \$${app['expectedBudget'] ?? '0'}',
                     style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: Colors.teal[800],
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 14),
+
+              // Budget
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.attach_money_rounded,
+                      size: 18,
+                      color: AppColors.secondary,
+                    ),
+                    Text(
+                      'Your bid: \$${app['expectedBudget'] ?? '0'}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
 
               // Availability
               Row(
@@ -271,19 +415,22 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                   Icon(
                     Icons.schedule_outlined,
                     size: 18,
-                    color: Colors.grey[600],
+                    color: AppColors.textSecondary,
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Availability: ${app['availability'] ?? 'Not specified'}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Applied date
               Row(
@@ -291,45 +438,55 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                   Icon(
                     Icons.calendar_today_outlined,
                     size: 14,
-                    color: Colors.grey[500],
+                    color: AppColors.textSecondary,
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Text(
                     'Applied: ${_formatDate(app['createdAt'])}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
 
               // Message if accepted
               if (app['status'] == 'accepted') ...[
-                SizedBox(height: 12),
+                const SizedBox(height: 14),
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.green[50],
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.success.withOpacity(0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.celebration, color: Colors.green[700]),
-                      SizedBox(width: 8),
+                      Icon(
+                        Icons.celebration_rounded,
+                        color: AppColors.success,
+                      ),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Congratulations! Your application was accepted. Contact the client to discuss next steps.',
+                          'Congratulations! Your application was accepted.',
                           style: TextStyle(
-                            color: Colors.green[800],
+                            color: AppColors.success,
                             fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
+                  child: ElevatedButton.icon(
                     onPressed: () async {
                       final result = await Navigator.push(
                         context,
@@ -346,37 +503,54 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                       if (result == true && mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Review submitted for the client'),
-                            backgroundColor: Colors.teal,
+                            content: const Text('Review submitted for the client'),
+                            backgroundColor: AppColors.success,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                         );
                       }
                     },
-                    icon: Icon(Icons.star_rate, color: Colors.amber),
-                    label: Text('Rate Client'),
+                    icon: Icon(Icons.star_rate_rounded, color: AppColors.warning),
+                    label: const Text('Rate Client'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.warning.withOpacity(0.1),
+                      foregroundColor: AppColors.warning,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
               ],
 
               // Message if rejected
               if (app['status'] == 'rejected') ...[
-                SizedBox(height: 12),
+                const SizedBox(height: 14),
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.error.withOpacity(0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.red[700]),
-                      SizedBox(width: 8),
+                      Icon(Icons.info_outline_rounded, color: AppColors.error),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Unfortunately, your application was not selected. Keep applying to other tasks!',
+                          'Your application was not selected. Keep applying!',
                           style: TextStyle(
-                            color: Colors.red[800],
+                            color: AppColors.error,
                             fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),

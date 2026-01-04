@@ -73,19 +73,21 @@ class ApplicationService {
     if (user == null) {
       return const Stream.empty();
     }
+    // Removed orderBy to avoid composite index requirement
+    // Sorting will be done in the UI layer
     return _firestore
         .collection(applicationsCollection)
         .where('applicantId', isEqualTo: user.uid)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
   // Obtenir les candidatures pour une tâche (pour le client)
   Stream<QuerySnapshot> getApplicationsForTask(String taskId) {
+    // Removed orderBy to avoid composite index requirement
+    // Sorting will be done in the UI layer
     return _firestore
         .collection(applicationsCollection)
         .where('taskId', isEqualTo: taskId)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
@@ -95,10 +97,11 @@ class ApplicationService {
     if (user == null) {
       return const Stream.empty();
     }
+    // Removed orderBy to avoid composite index requirement
+    // Sorting will be done in the UI layer
     return _firestore
         .collection(applicationsCollection)
         .where('clientId', isEqualTo: user.uid)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
@@ -131,10 +134,66 @@ class ApplicationService {
 
   // Accepter une candidature
   Future<void> acceptApplication(String applicationId) async {
-    await updateApplicationStatus(
-      applicationId: applicationId,
-      status: 'accepted',
-    );
+    try {
+      print('=== Starting acceptApplication for: $applicationId ===');
+      
+      // Get application details
+      final appDoc = await _firestore
+          .collection(applicationsCollection)
+          .doc(applicationId)
+          .get();
+      
+      if (!appDoc.exists) throw Exception('Application not found');
+      
+      final appData = appDoc.data() as Map<String, dynamic>;
+      final taskId = appData['taskId'];
+      final applicantId = appData['applicantId'];
+      final applicantName = appData['applicantName'];
+      
+      print('Task ID: $taskId');
+      print('Applicant: $applicantName ($applicantId)');
+      
+      // Update application status to accepted
+      await updateApplicationStatus(
+        applicationId: applicationId,
+        status: 'accepted',
+      );
+      print('✓ Application status updated to accepted');
+      
+      // Update task status to in_progress and store selected student info
+      await _firestore.collection('tasks').doc(taskId).update({
+        'status': 'in_progress',
+        'selectedApplicantId': applicantId,
+        'selectedApplicantName': applicantName,
+        'selectedApplicationId': applicationId,
+        'workStartedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      print('✓ Task status updated to in_progress');
+      
+      // Optionally: reject all other pending applications for this task
+      final otherApplications = await _firestore
+          .collection(applicationsCollection)
+          .where('taskId', isEqualTo: taskId)
+          .where('status', isEqualTo: 'pending')
+          .get();
+      
+      print('Found ${otherApplications.docs.length} other pending applications');
+      
+      for (var doc in otherApplications.docs) {
+        if (doc.id != applicationId) {
+          await doc.reference.update({
+            'status': 'rejected',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+      print('✓ Other applications rejected');
+      print('=== acceptApplication completed successfully ===');
+    } catch (e) {
+      print('❌ Error in acceptApplication: $e');
+      rethrow;
+    }
   }
 
   // Rejeter une candidature
