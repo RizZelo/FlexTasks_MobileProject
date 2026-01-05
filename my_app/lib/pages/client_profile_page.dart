@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/user_service.dart';
 import '../services/task_service.dart';
 import '../services/review_service.dart';
+import '../main.dart';
 import 'chat_page.dart';
 
 class ClientProfilePage extends StatefulWidget {
@@ -22,24 +23,30 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: FutureBuilder<DocumentSnapshot>(
         future: _userService.getUserById(widget.clientId),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Scaffold(
-              appBar: AppBar(title: Text('Error')),
+              appBar: AppBar(title: const Text('Error')),
               body: Center(child: Text('Error: ${snapshot.error}')),
             );
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Scaffold(body: Center(child: CircularProgressIndicator()));
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            );
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
             return Scaffold(
-              appBar: AppBar(title: Text('Not Found')),
-              body: Center(child: Text('User not found')),
+              appBar: AppBar(title: const Text('Not Found')),
+              body: const Center(child: Text('User not found')),
             );
           }
 
@@ -49,114 +56,134 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
 
           return CustomScrollView(
             slivers: [
-              // Profile Header
+              // Modern Profile Header
               SliverAppBar(
-                expandedHeight: 280,
+                expandedHeight: 300,
                 pinned: true,
-                backgroundColor: Colors.teal,
+                backgroundColor: AppColors.primary,
+                leading: Container(
+                  margin: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.teal[400]!, Colors.teal[700]!],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.primary,
+                          AppColors.primary.withOpacity(0.8),
+                          AppColors.secondary.withOpacity(0.6),
+                        ],
                       ),
                     ),
                     child: SafeArea(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SizedBox(height: 40),
+                          const SizedBox(height: 40),
                           // Profile Avatar
                           Stack(
                             children: [
-                              CircleAvatar(
-                                radius: 50,
-                                backgroundColor: Colors.white,
-                                child: Text(
-                                  (user['name'] ?? 'U')[0].toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.teal,
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.3),
+                                    width: 3,
+                                  ),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 50,
+                                  backgroundColor: Colors.white,
+                                  child: Text(
+                                    (user['name'] ?? 'U')[0].toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 40,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
                                   ),
                                 ),
                               ),
                               Positioned(
-                                bottom: 0,
-                                right: 0,
+                                bottom: 4,
+                                right: 4,
                                 child: Container(
-                                  padding: EdgeInsets.all(4),
+                                  padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
                                     color: user['isOnline'] == true
-                                        ? Colors.green
-                                        : Colors.grey,
+                                        ? AppColors.success
+                                        : AppColors.textSecondary,
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: Colors.white,
-                                      width: 2,
+                                      width: 3,
                                     ),
-                                  ),
-                                  child: Icon(
-                                    Icons.circle,
-                                    size: 8,
-                                    color: user['isOnline'] == true
-                                        ? Colors.green
-                                        : Colors.grey,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           // Name
                           Text(
                             user['name'] ?? 'Unknown User',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 24,
+                              fontSize: 26,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           // Email
                           Text(
                             user['email'] ?? '',
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: Colors.white.withOpacity(0.8),
                               fontSize: 14,
                             ),
                           ),
-                          SizedBox(height: 8),
-                          // Online Status
+                          const SizedBox(height: 12),
+                          // Online Status Badge
                           Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.circle,
-                                  size: 8,
-                                  color: user['isOnline'] == true
-                                      ? Colors.greenAccent
-                                      : Colors.grey[400],
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: user['isOnline'] == true
+                                        ? Colors.greenAccent
+                                        : Colors.grey[400],
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                                SizedBox(width: 6),
+                                const SizedBox(width: 8),
                                 Text(
-                                  user['isOnline'] == true
-                                      ? 'Online'
-                                      : 'Offline',
-                                  style: TextStyle(
+                                  user['isOnline'] == true ? 'Online' : 'Offline',
+                                  style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 12,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
@@ -171,156 +198,179 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
               // Content
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Contact Button
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatPage(
-                                receiverId: widget.clientId,
-                                receiverName: user['name'] ?? 'Unknown',
-                                receiverEmail: user['email'] ?? '',
-                              ),
+                      Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.primary, AppColors.secondary],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
-                          );
-                        },
-                        icon: Icon(Icons.chat_bubble_outline),
-                        label: Text('Send Message'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
-                          foregroundColor: Colors.white,
-                          minimumSize: Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatPage(
+                                  receiverId: widget.clientId,
+                                  receiverName: user['name'] ?? 'Unknown',
+                                  receiverEmail: user['email'] ?? '',
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.chat_bubble_outline_rounded),
+                          label: const Text('Send Message'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
                         ),
                       ),
-                      SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
                       // Stats Section
-                      Text(
-                        'Statistics',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.star_rounded,
+                              value: ratingAverage.toStringAsFixed(1),
+                              label: 'Rating',
+                              color: AppColors.warning,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.rate_review_rounded,
+                              value: ratingCount.toString(),
+                              label: 'Reviews',
+                              color: AppColors.info,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: StreamBuilder<QuerySnapshot>(
+                              stream: _taskService.getClientTasks(widget.clientId),
+                              builder: (context, taskSnapshot) {
+                                int taskCount = 0;
+                                if (taskSnapshot.hasData) {
+                                  taskCount = taskSnapshot.data!.docs.length;
+                                }
+                                return _buildStatCard(
+                                  icon: Icons.work_outline_rounded,
+                                  value: taskCount.toString(),
+                                  label: 'Tasks',
+                                  color: AppColors.secondary,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Rating Section
+                      _buildSectionHeader(
+                        'Ratings & Reviews',
+                        Icons.star_outline_rounded,
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 10,
+                            ),
+                          ],
                         ),
-                      ),
-                      SizedBox(height: 12),
-                      StreamBuilder<QuerySnapshot>(
-                        stream: _taskService.getClientTasks(widget.clientId),
-                        builder: (context, taskSnapshot) {
-                          int totalTasks = 0;
-                          int activeTasks = 0;
-                          int completedTasks = 0;
-
-                          if (taskSnapshot.hasData) {
-                            totalTasks = taskSnapshot.data!.docs.length;
-                            for (var doc in taskSnapshot.data!.docs) {
-                              final data = doc.data() as Map<String, dynamic>;
-                              if (data['status'] == 'active') {
-                                activeTasks++;
-                              } else if (data['status'] == 'completed') {
-                                completedTasks++;
-                              }
-                            }
-                          }
-
-                          return Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  icon: Icons.work,
-                                  value: '$totalTasks',
-                                  label: 'Total Tasks',
-                                  color: Colors.blue,
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: _buildStatCard(
-                                  icon: Icons.pending_actions,
-                                  value: '$activeTasks',
-                                  label: 'Active',
-                                  color: Colors.orange,
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: _buildStatCard(
-                                  icon: Icons.check_circle,
-                                  value: '$completedTasks',
-                                  label: 'Completed',
-                                  color: Colors.green,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                      SizedBox(height: 24),
-
-                      // Ratings & Feedback
-                      Text(
-                        'Ratings & Feedback',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                      Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: ratingCount > 0
-                              ? Row(
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Column(
                                   children: [
-                                    _buildRatingStars(ratingAverage),
-                                    SizedBox(width: 12),
                                     Text(
                                       ratingAverage.toStringAsFixed(1),
                                       style: TextStyle(
-                                        fontSize: 20,
+                                        fontSize: 48,
                                         fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary,
                                       ),
                                     ),
-                                    SizedBox(width: 4),
+                                    _buildRatingStars(ratingAverage),
+                                    const SizedBox(height: 4),
                                     Text(
-                                      '($ratingCount reviews)',
-                                      style: TextStyle(color: Colors.grey[600]),
+                                      '$ratingCount reviews',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ],
-                                )
-                              : Text(
-                                  'No reviews yet',
-                                  style: TextStyle(color: Colors.grey[600]),
                                 ),
+                                const SizedBox(width: 24),
+                                Expanded(
+                                  child: ratingCount > 0
+                                      ? _buildRatingBars(ratingAverage)
+                                      : Center(
+                                          child: Text(
+                                            'No reviews yet',
+                                            style: TextStyle(
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      SizedBox(height: 12),
+                      const SizedBox(height: 16),
+
+                      // Reviews List
                       StreamBuilder<QuerySnapshot>(
-                        stream: _reviewService.getReviewsForUser(
-                          widget.clientId,
-                        ),
+                        stream: _reviewService.getReviewsForUser(widget.clientId),
                         builder: (context, reviewSnapshot) {
                           if (reviewSnapshot.hasError) {
-                            return Text('Error loading reviews');
+                            return const Text('Error loading reviews');
                           }
 
                           if (reviewSnapshot.connectionState ==
                               ConnectionState.waiting) {
-                            return Center(child: CircularProgressIndicator());
+                            return Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                              ),
+                            );
                           }
 
                           if (!reviewSnapshot.hasData ||
                               reviewSnapshot.data!.docs.isEmpty) {
-                            return SizedBox.shrink();
+                            return const SizedBox.shrink();
                           }
 
                           final reviews = reviewSnapshot.data!.docs.take(5);
@@ -335,40 +385,65 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                                 final String reviewerName =
                                     data['reviewerName'] ?? 'User';
 
-                                return Card(
-                                  margin: EdgeInsets.only(bottom: 8),
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              reviewerName,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 18,
+                                                backgroundColor:
+                                                    AppColors.primary
+                                                        .withOpacity(0.1),
+                                                child: Text(
+                                                  reviewerName[0].toUpperCase(),
+                                                  style: TextStyle(
+                                                    color: AppColors.primary,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                            _buildRatingStars(
-                                              rating.toDouble(),
-                                            ),
-                                          ],
-                                        ),
-                                        if (comment.isNotEmpty) ...[
-                                          SizedBox(height: 8),
-                                          Text(
-                                            comment,
-                                            style: TextStyle(
-                                              color: Colors.grey[700],
-                                            ),
+                                              const SizedBox(width: 10),
+                                              Text(
+                                                reviewerName,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                              ),
+                                            ],
                                           ),
+                                          _buildRatingStars(rating.toDouble()),
                                         ],
+                                      ),
+                                      if (comment.isNotEmpty) ...[
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          comment,
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                            height: 1.4,
+                                          ),
+                                        ),
                                       ],
-                                    ),
+                                    ],
                                   ),
                                 );
                               }),
@@ -376,144 +451,168 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                           );
                         },
                       ),
-                      SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
                       // Member Info
-                      Text(
+                      _buildSectionHeader(
                         'Member Information',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
+                        Icons.info_outline_rounded,
                       ),
-                      SizedBox(height: 12),
-                      Card(
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
                         child: Column(
                           children: [
                             _buildInfoTile(
-                              icon: Icons.calendar_today,
+                              icon: Icons.calendar_today_rounded,
                               title: 'Member Since',
                               value: _formatDate(user['createdAt']),
                             ),
-                            Divider(height: 1),
+                            Divider(
+                              height: 1,
+                              color: AppColors.border,
+                            ),
                             _buildInfoTile(
-                              icon: Icons.access_time,
+                              icon: Icons.access_time_rounded,
                               title: 'Last Seen',
                               value: _formatDate(user['lastSeen']),
                             ),
                           ],
                         ),
                       ),
-                      SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
                       // Posted Tasks Section
-                      Text(
-                        'Posted Tasks',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
+                      _buildSectionHeader(
+                        'Active Tasks',
+                        Icons.work_outline_rounded,
                       ),
-                      SizedBox(height: 12),
+                      const SizedBox(height: 12),
                       StreamBuilder<QuerySnapshot>(
                         stream: _taskService.getClientTasks(widget.clientId),
                         builder: (context, taskSnapshot) {
                           if (taskSnapshot.hasError) {
-                            return Text('Error loading tasks');
+                            return const Text('Error loading tasks');
                           }
 
                           if (taskSnapshot.connectionState ==
                               ConnectionState.waiting) {
-                            return Center(child: CircularProgressIndicator());
-                          }
-
-                          if (!taskSnapshot.hasData ||
-                              taskSnapshot.data!.docs.isEmpty) {
-                            return Card(
-                              child: Padding(
-                                padding: EdgeInsets.all(24),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.work_off_outlined,
-                                      size: 48,
-                                      color: Colors.grey[400],
-                                    ),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      'No tasks posted yet',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
+                            return Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
                               ),
                             );
                           }
 
+                          if (!taskSnapshot.hasData ||
+                              taskSnapshot.data!.docs.isEmpty) {
+                            return _buildEmptyState(
+                              icon: Icons.work_off_outlined,
+                              message: 'No tasks posted yet',
+                            );
+                          }
+
                           // Show only active tasks
-                          final activeTasks = taskSnapshot.data!.docs
-                              .where((doc) {
-                                final data = doc.data() as Map<String, dynamic>;
-                                return data['status'] == 'active';
-                              })
-                              .take(5)
-                              .toList();
+                          final activeTasks =
+                              taskSnapshot.data!.docs.where((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            return data['status'] == 'active';
+                          }).take(5).toList();
 
                           if (activeTasks.isEmpty) {
-                            return Card(
-                              child: Padding(
-                                padding: EdgeInsets.all(24),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle_outline,
-                                      size: 48,
-                                      color: Colors.grey[400],
-                                    ),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      'No active tasks',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            return _buildEmptyState(
+                              icon: Icons.check_circle_outline,
+                              message: 'No active tasks',
                             );
                           }
 
                           return Column(
                             children: activeTasks.map((doc) {
                               final task = doc.data() as Map<String, dynamic>;
-                              return Card(
-                                margin: EdgeInsets.only(bottom: 8),
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
                                 child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
                                   leading: Container(
-                                    padding: EdgeInsets.all(8),
+                                    padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: Colors.teal[50],
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Icon(
-                                      Icons.work_outline,
-                                      color: Colors.teal,
+                                      _getCategoryIcon(task['category']),
+                                      color: AppColors.primary,
                                     ),
                                   ),
                                   title: Text(
                                     task['title'] ?? 'Untitled',
                                     style: TextStyle(
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
                                     ),
                                   ),
-                                  subtitle: Text(
-                                    '${task['category']} • \$${task['budget']}',
-                                    style: TextStyle(fontSize: 12),
+                                  subtitle: Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.secondary
+                                                .withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            task['category'] ?? 'General',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.secondary,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '\$${task['budget']}',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.textSecondary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   trailing: Icon(
-                                    Icons.arrow_forward_ios,
+                                    Icons.arrow_forward_ios_rounded,
                                     size: 16,
-                                    color: Colors.grey,
+                                    color: AppColors.textSecondary,
                                   ),
                                 ),
                               );
@@ -521,6 +620,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                           );
                         },
                       ),
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
@@ -532,35 +632,69 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
     );
   }
 
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.primary),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildStatCard({
     required IconData icon,
     required String value,
     required String label,
     required Color color,
   }) {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 24),
-            SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -571,17 +705,27 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
     required String value,
   }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.teal),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 20),
+      ),
       title: Text(
         title,
-        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        style: TextStyle(
+          fontSize: 12,
+          color: AppColors.textSecondary,
+        ),
       ),
       subtitle: Text(
         value,
         style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: Colors.grey[800],
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
         ),
       ),
     );
@@ -593,19 +737,113 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
       children: List.generate(5, (index) {
         final starIndex = index + 1;
         return Icon(
-          starIndex <= rating ? Icons.star : Icons.star_border,
-          color: Colors.amber,
+          starIndex <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
+          color: AppColors.warning,
           size: 18,
         );
       }),
     );
   }
 
+  Widget _buildRatingBars(double averageRating) {
+    return Column(
+      children: List.generate(5, (index) {
+        final star = 5 - index;
+        final percentage = averageRating >= star ? 1.0 : 0.0;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Text(
+                '$star',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: percentage,
+                    backgroundColor: AppColors.border,
+                    valueColor: AlwaysStoppedAnimation(AppColors.warning),
+                    minHeight: 6,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String message,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 48,
+            color: AppColors.textSecondary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getCategoryIcon(String? category) {
+    switch (category?.toLowerCase()) {
+      case 'tutoring':
+        return Icons.school_rounded;
+      case 'gardening':
+        return Icons.grass_rounded;
+      case 'petcare':
+        return Icons.pets_rounded;
+      case 'cleaning':
+        return Icons.cleaning_services_rounded;
+      case 'babysitting':
+        return Icons.child_care_rounded;
+      case 'moving':
+        return Icons.local_shipping_rounded;
+      default:
+        return Icons.work_outline_rounded;
+    }
+  }
+
   String _formatDate(dynamic timestamp) {
     if (timestamp == null) return 'Unknown';
     if (timestamp is Timestamp) {
       final date = timestamp.toDate();
-      return '${date.day}/${date.month}/${date.year}';
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
     }
     return 'Unknown';
   }
