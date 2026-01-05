@@ -258,19 +258,173 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
                     )
                     .toList();
 
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildApplicationsList(pendingApps, 'pending'),
-                    _buildApplicationsList(acceptedApps, 'accepted'),
-                    _buildApplicationsList(rejectedApps, 'rejected'),
-                  ],
+                          // Chat with Student Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChatPage(
+                                      receiverId: completedApp!['applicantId'] ?? '',
+                                      receiverName: completedApp['applicantName'] ?? 'Student',
+                                      receiverEmail: completedApp['applicantEmail'] ?? '',
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: Icon(Icons.chat_bubble_outline, size: 20),
+                              label: Text('Message Student'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.teal,
+                                side: BorderSide(color: Colors.teal),
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          Text(
+                            'No student information available',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+
+                        SizedBox(height: 24),
+                        TextButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(Icons.arrow_back),
+                          label: Text('Back to Dashboard'),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
+            );
+          }
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Applications'),
+            backgroundColor: Colors.teal,
+            elevation: 0,
+            bottom: TabBar(
+              controller: _tabController,
+              indicatorColor: Colors.white,
+              tabs: [
+                Tab(text: 'Pending'),
+                Tab(text: 'Accepted'),
+                Tab(text: 'Rejected'),
+              ],
             ),
           ),
-        ],
-      ),
+          body: Column(
+            children: [
+              // Task Info Header
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.teal,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.taskTitle,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: _applicationService.getApplicationsForTask(
+                        widget.taskId,
+                      ),
+                      builder: (context, snapshot) {
+                        final total = snapshot.hasData
+                            ? snapshot.data!.docs.length
+                            : 0;
+                        final pending = snapshot.hasData
+                            ? snapshot.data!.docs
+                                  .where(
+                                    (doc) =>
+                                        (doc.data()
+                                            as Map<String, dynamic>)['status'] ==
+                                        'pending',
+                                  )
+                                  .length
+                            : 0;
+                        return Text(
+                          '$total applications ($pending pending)',
+                          style: TextStyle(color: Colors.white70),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              // Applications List
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _applicationService.getApplicationsForTask(widget.taskId),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    }
+
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
+
+                    final allApps = snapshot.data?.docs ?? [];
+                    final pendingApps = allApps
+                        .where(
+                          (doc) =>
+                              (doc.data() as Map<String, dynamic>)['status'] ==
+                              'pending',
+                        )
+                        .toList();
+                    final acceptedApps = allApps
+                        .where(
+                          (doc) =>
+                              (doc.data() as Map<String, dynamic>)['status'] ==
+                              'accepted',
+                        )
+                        .toList();
+                    final rejectedApps = allApps
+                        .where(
+                          (doc) =>
+                              (doc.data() as Map<String, dynamic>)['status'] ==
+                              'rejected',
+                        )
+                        .toList();
+
+                    return TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildApplicationsList(pendingApps, 'pending'),
+                        _buildApplicationsList(acceptedApps, 'accepted'),
+                        _buildApplicationsList(rejectedApps, 'rejected'),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

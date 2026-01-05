@@ -73,6 +73,49 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
 
           final task = snapshot.data!.data() as Map<String, dynamic>;
           final isOwnTask = currentUser?.uid == task['clientId'];
+          final isCompleted = task['status'] == 'completed';
+
+          // If task is completed, show a message and prevent access
+          if (isCompleted && !isOwnTask) {
+            return Scaffold(
+              appBar: AppBar(title: Text('Task Unavailable')),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 80,
+                      color: Colors.grey[400],
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'This task has been completed',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Applications are no longer accepted',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.arrow_back),
+                      label: Text('Go Back'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
           return CustomScrollView(
             slivers: [

@@ -230,4 +230,28 @@ class ApplicationService {
 
     return existingApplication.docs.isNotEmpty;
   }
+
+  // Marquer une tâche comme terminée (completed)
+  Future<void> markTaskAsCompleted({
+    required String applicationId,
+    required String taskId,
+  }) async {
+    try {
+      // Mettre à jour le statut de la candidature
+      await _firestore
+          .collection(applicationsCollection)
+          .doc(applicationId)
+          .update({
+            'status': 'completed',
+            'completedAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+      // Mettre à jour le statut de la tâche
+      await _taskService.updateTask(taskId: taskId, status: 'completed');
+    } catch (e) {
+      print('Erreur lors de la complétion de la tâche: $e');
+      rethrow;
+    }
+  }
 }

@@ -221,15 +221,39 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Introduction Card
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.info.withOpacity(0.1),
-                            AppColors.primary.withOpacity(0.05),
-                          ],
+                    _buildSectionTitle('Cover Letter *'),
+                    SizedBox(height: 8),
+                    TextFormField(
+                      controller: _coverLetterController,
+                      maxLines: 5,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Introduce yourself and explain why you are the best fit for this task...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please write a cover letter';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+
+                    _buildSectionTitle('Expected Budget *'),
+                    SizedBox(height: 8),
+                    TextFormField(
+                      controller: _expectedBudgetController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'Enter your expected payment',
+                        prefixIcon: Icon(
+                          Icons.attach_money,
+                          color: Colors.teal,
                         ),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
