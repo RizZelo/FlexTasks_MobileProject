@@ -646,7 +646,11 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
           return Center(child: CircularProgressIndicator());
         }
 
-        final applications = snapshot.data?.docs ?? [];
+        // Filter out completed applications (tasks that are finished)
+        final applications = (snapshot.data?.docs ?? []).where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return data['status'] != 'completed';
+        }).toList();
 
         if (applications.isEmpty) {
           return Center(
@@ -695,6 +699,10 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
       case 'rejected':
         statusColor = Colors.red;
         statusIcon = Icons.cancel;
+        break;
+      case 'completed':
+        statusColor = Colors.blue;
+        statusIcon = Icons.done_all;
         break;
       default:
         statusColor = Colors.orange;
@@ -831,6 +839,92 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                     ),
                   ),
                 ],
+              ),
+            ],
+            if (app['status'] == 'accepted') ...[
+              SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    // Confirmation dialog
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Mark as Finished'),
+                        content: Text(
+                          'Are you sure you want to mark this task as completed? This action cannot be undone.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                            ),
+                            child: Text('Confirm'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      try {
+                        await _applicationService.markTaskAsCompleted(
+                          applicationId: appId,
+                          taskId: app['taskId'],
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Task marked as completed!'),
+                            backgroundColor: Colors.blue,
+                          ),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: Icon(Icons.done_all, size: 18),
+                  label: Text('Mark as Finished'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+            if (app['status'] == 'completed') ...[
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 16, color: Colors.blue[800]),
+                    SizedBox(width: 8),
+                    Text(
+                      'Task completed successfully',
+                      style: TextStyle(
+                        color: Colors.blue[800],
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],

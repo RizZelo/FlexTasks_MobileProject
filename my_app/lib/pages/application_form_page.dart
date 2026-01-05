@@ -171,9 +171,6 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                         if (value == null || value.isEmpty) {
                           return 'Please write a cover letter';
                         }
-                        if (value.length < 50) {
-                          return 'Cover letter should be at least 50 characters';
-                        }
                         return null;
                       },
                     ),
