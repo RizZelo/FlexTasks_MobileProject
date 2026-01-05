@@ -40,6 +40,375 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
 
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _taskService.getTaskStream(widget.taskId),
+      builder: (context, taskSnapshot) {
+        // Check if task is completed - show rating interface
+        if (taskSnapshot.hasData && taskSnapshot.data!.exists) {
+          final taskData = taskSnapshot.data!.data() as Map<String, dynamic>;
+          if (taskData['status'] == 'completed') {
+            return _buildCompletedTaskView();
+          }
+        }
+
+        return _buildApplicationsView();
+      },
+    );
+  }
+
+  Widget _buildCompletedTaskView() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _applicationService.getApplicationsForTask(widget.taskId),
+      builder: (context, appSnapshot) {
+        if (appSnapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              title: const Text('Task Completed'),
+              backgroundColor: AppColors.primary,
+            ),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Find the accepted or completed application
+        Map<String, dynamic>? completedApp;
+        if (appSnapshot.hasData) {
+          for (var doc in appSnapshot.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            if (data['status'] == 'completed' || data['status'] == 'accepted') {
+              completedApp = data;
+              break;
+            }
+          }
+        }
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Task Completed'),
+            backgroundColor: AppColors.primary,
+            leading: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                // Success Icon
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    size: 80,
+                    color: AppColors.success,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  widget.taskTitle,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(25),
+                    border: Border.all(
+                      color: AppColors.success.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    'Completed',
+                    style: TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Student who completed the task
+                if (completedApp != null) ...[
+                  Text(
+                    'Completed by',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [AppColors.primary, AppColors.secondary],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              (completedApp['applicantName'] ?? 'U')[0]
+                                  .toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 32,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          completedApp['applicantName'] ?? 'Unknown Student',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          completedApp['applicantEmail'] ?? '',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.attach_money_rounded,
+                                color: AppColors.secondary,
+                                size: 20,
+                              ),
+                              Text(
+                                '\$${completedApp['expectedBudget'] ?? '0'}',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Rate Student Button
+                  Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.warning,
+                          AppColors.warning.withOpacity(0.8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.warning.withOpacity(0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ReviewPage(
+                              revieweeId: completedApp!['applicantId'] ?? '',
+                              revieweeName:
+                                  completedApp['applicantName'] ?? 'Student',
+                              revieweeRole: 'student',
+                              taskId: widget.taskId,
+                              taskTitle: widget.taskTitle,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.star_rounded, size: 24),
+                      label: const Text(
+                        'Rate Student',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Message Student Button
+                  Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.primary, width: 2),
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatPage(
+                              receiverId: completedApp!['applicantId'] ?? '',
+                              receiverName:
+                                  completedApp['applicantName'] ?? 'Student',
+                              receiverEmail:
+                                  completedApp['applicantEmail'] ?? '',
+                            ),
+                          ),
+                        );
+                      },
+                      icon: Icon(
+                        Icons.chat_bubble_rounded,
+                        size: 22,
+                        color: AppColors.primary,
+                      ),
+                      label: Text(
+                        'Message Student',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.person_off_rounded,
+                          size: 48,
+                          color: AppColors.textSecondary.withOpacity(0.5),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No student information available',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+                TextButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(
+                    Icons.arrow_back_rounded,
+                    color: AppColors.textSecondary,
+                  ),
+                  label: Text(
+                    'Back to Dashboard',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildApplicationsView() {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -56,17 +425,18 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
                 borderRadius: BorderRadius.circular(10),
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
             flexibleSpace: FlexibleSpaceBar(
               title: const Text(
                 'Applications',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               background: Container(
                 decoration: BoxDecoration(
@@ -108,23 +478,29 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
                                 : 0;
                             final pending = snapshot.hasData
                                 ? snapshot.data!.docs
-                                    .where(
-                                      (doc) =>
-                                          (doc.data()
-                                              as Map<String, dynamic>)['status'] ==
-                                          'pending',
-                                    )
-                                    .length
+                                      .where(
+                                        (doc) =>
+                                            (doc.data()
+                                                as Map<
+                                                  String,
+                                                  dynamic
+                                                >)['status'] ==
+                                            'pending',
+                                      )
+                                      .length
                                 : 0;
                             final accepted = snapshot.hasData
                                 ? snapshot.data!.docs
-                                    .where(
-                                      (doc) =>
-                                          (doc.data()
-                                              as Map<String, dynamic>)['status'] ==
-                                          'accepted',
-                                    )
-                                    .length
+                                      .where(
+                                        (doc) =>
+                                            (doc.data()
+                                                as Map<
+                                                  String,
+                                                  dynamic
+                                                >)['status'] ==
+                                            'accepted',
+                                      )
+                                      .length
                                 : 0;
 
                             return Container(
@@ -138,11 +514,23 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
                               ),
                               child: Row(
                                 children: [
-                                  _buildStatItem(Icons.people_rounded, '$total', 'Total'),
+                                  _buildStatItem(
+                                    Icons.people_rounded,
+                                    '$total',
+                                    'Total',
+                                  ),
                                   _buildDivider(),
-                                  _buildStatItem(Icons.pending_rounded, '$pending', 'Pending'),
+                                  _buildStatItem(
+                                    Icons.pending_rounded,
+                                    '$pending',
+                                    'Pending',
+                                  ),
                                   _buildDivider(),
-                                  _buildStatItem(Icons.check_circle_rounded, '$accepted', 'Accepted'),
+                                  _buildStatItem(
+                                    Icons.check_circle_rounded,
+                                    '$accepted',
+                                    'Accepted',
+                                  ),
                                 ],
                               ),
                             );
@@ -214,28 +602,26 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                    ),
+                    child: CircularProgressIndicator(color: AppColors.primary),
                   );
                 }
 
                 final allApps = snapshot.data?.docs ?? [];
-                
+
                 // Sort applications by createdAt (most recent first)
                 allApps.sort((a, b) {
                   final aData = a.data() as Map<String, dynamic>;
                   final bData = b.data() as Map<String, dynamic>;
                   final aTime = aData['createdAt'] as Timestamp?;
                   final bTime = bData['createdAt'] as Timestamp?;
-                  
+
                   if (aTime == null && bTime == null) return 0;
                   if (aTime == null) return 1;
                   if (bTime == null) return -1;
-                  
+
                   return bTime.compareTo(aTime);
                 });
-                
+
                 final pendingApps = allApps
                     .where(
                       (doc) =>
@@ -258,173 +644,19 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
                     )
                     .toList();
 
-                          // Chat with Student Button
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ChatPage(
-                                      receiverId: completedApp!['applicantId'] ?? '',
-                                      receiverName: completedApp['applicantName'] ?? 'Student',
-                                      receiverEmail: completedApp['applicantEmail'] ?? '',
-                                    ),
-                                  ),
-                                );
-                              },
-                              icon: Icon(Icons.chat_bubble_outline, size: 20),
-                              label: Text('Message Student'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.teal,
-                                side: BorderSide(color: Colors.teal),
-                                padding: EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          Text(
-                            'No student information available',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-
-                        SizedBox(height: 24),
-                        TextButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(Icons.arrow_back),
-                          label: Text('Back to Dashboard'),
-                        ),
-                      ],
-                    ),
-                  ),
+                return TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildApplicationsList(pendingApps, 'pending'),
+                    _buildApplicationsList(acceptedApps, 'accepted'),
+                    _buildApplicationsList(rejectedApps, 'rejected'),
+                  ],
                 );
               },
-            );
-          }
-        }
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text('Applications'),
-            backgroundColor: Colors.teal,
-            elevation: 0,
-            bottom: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.white,
-              tabs: [
-                Tab(text: 'Pending'),
-                Tab(text: 'Accepted'),
-                Tab(text: 'Rejected'),
-              ],
             ),
           ),
-          body: Column(
-            children: [
-              // Task Info Header
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.teal,
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.taskTitle,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    StreamBuilder<QuerySnapshot>(
-                      stream: _applicationService.getApplicationsForTask(
-                        widget.taskId,
-                      ),
-                      builder: (context, snapshot) {
-                        final total = snapshot.hasData
-                            ? snapshot.data!.docs.length
-                            : 0;
-                        final pending = snapshot.hasData
-                            ? snapshot.data!.docs
-                                  .where(
-                                    (doc) =>
-                                        (doc.data()
-                                            as Map<String, dynamic>)['status'] ==
-                                        'pending',
-                                  )
-                                  .length
-                            : 0;
-                        return Text(
-                          '$total applications ($pending pending)',
-                          style: TextStyle(color: Colors.white70),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              // Applications List
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: _applicationService.getApplicationsForTask(widget.taskId),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator());
-                    }
-
-                    final allApps = snapshot.data?.docs ?? [];
-                    final pendingApps = allApps
-                        .where(
-                          (doc) =>
-                              (doc.data() as Map<String, dynamic>)['status'] ==
-                              'pending',
-                        )
-                        .toList();
-                    final acceptedApps = allApps
-                        .where(
-                          (doc) =>
-                              (doc.data() as Map<String, dynamic>)['status'] ==
-                              'accepted',
-                        )
-                        .toList();
-                    final rejectedApps = allApps
-                        .where(
-                          (doc) =>
-                              (doc.data() as Map<String, dynamic>)['status'] ==
-                              'rejected',
-                        )
-                        .toList();
-
-                    return TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildApplicationsList(pendingApps, 'pending'),
-                        _buildApplicationsList(acceptedApps, 'accepted'),
-                        _buildApplicationsList(rejectedApps, 'rejected'),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -483,22 +715,22 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
                 color: status == 'pending'
                     ? AppColors.warning.withOpacity(0.1)
                     : status == 'accepted'
-                        ? AppColors.success.withOpacity(0.1)
-                        : AppColors.error.withOpacity(0.1),
+                    ? AppColors.success.withOpacity(0.1)
+                    : AppColors.error.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 status == 'pending'
                     ? Icons.hourglass_empty_rounded
                     : status == 'accepted'
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.cancel_outlined,
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.cancel_outlined,
                 size: 60,
                 color: status == 'pending'
                     ? AppColors.warning
                     : status == 'accepted'
-                        ? AppColors.success
-                        : AppColors.error,
+                    ? AppColors.success
+                    : AppColors.error,
               ),
             ),
             const SizedBox(height: 20),
@@ -515,12 +747,9 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
               status == 'pending'
                   ? 'New applications will appear here'
                   : status == 'accepted'
-                      ? 'No accepted applicants yet'
-                      : 'No rejected applications',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
+                  ? 'No accepted applicants yet'
+                  : 'No rejected applications',
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -582,7 +811,9 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
                   AppColors.secondary.withOpacity(0.02),
                 ],
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
             ),
             child: Row(
               children: [
@@ -638,13 +869,14 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: statusColor.withOpacity(0.3),
-                    ),
+                    border: Border.all(color: statusColor.withOpacity(0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1166,10 +1398,14 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
                                   SnackBar(
                                     content: Row(
                                       children: [
-                                        Icon(Icons.check_circle_rounded,
-                                            color: Colors.white),
+                                        Icon(
+                                          Icons.check_circle_rounded,
+                                          color: Colors.white,
+                                        ),
                                         const SizedBox(width: 12),
-                                        const Text('Review submitted successfully!'),
+                                        const Text(
+                                          'Review submitted successfully!',
+                                        ),
                                       ],
                                     ),
                                     backgroundColor: AppColors.success,
@@ -1242,7 +1478,10 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           Container(
             decoration: BoxDecoration(
@@ -1317,7 +1556,10 @@ class _TaskApplicationsPageState extends State<TaskApplicationsPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           Container(
             decoration: BoxDecoration(

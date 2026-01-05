@@ -100,10 +100,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                     SizedBox(height: 8),
                     Text(
                       'Applications are no longer accepted',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[500],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                     ),
                     SizedBox(height: 24),
                     ElevatedButton.icon(
@@ -252,7 +249,10 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
 
                       // Show selected student if task is in progress or completed
                       if (task['selectedApplicantName'] != null) ...[
-                        _buildSectionHeader('Assigned To', Icons.person_outline_rounded),
+                        _buildSectionHeader(
+                          'Assigned To',
+                          Icons.person_outline_rounded,
+                        ),
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -308,7 +308,10 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                       ],
 
                       // Description Section
-                      _buildSectionHeader('Description', Icons.description_outlined),
+                      _buildSectionHeader(
+                        'Description',
+                        Icons.description_outlined,
+                      ),
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -334,7 +337,10 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                       const SizedBox(height: 24),
 
                       // Details Section
-                      _buildSectionHeader('Details', Icons.info_outline_rounded),
+                      _buildSectionHeader(
+                        'Details',
+                        Icons.info_outline_rounded,
+                      ),
                       const SizedBox(height: 12),
                       Container(
                         decoration: BoxDecoration(
@@ -381,7 +387,10 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                       if (task['backgroundCheckRequired'] == true ||
                           task['experienceRequired'] == true ||
                           task['referencesNeeded'] == true) ...[
-                        _buildSectionHeader('Requirements', Icons.checklist_rounded),
+                        _buildSectionHeader(
+                          'Requirements',
+                          Icons.checklist_rounded,
+                        ),
                         const SizedBox(height: 12),
                         Wrap(
                           spacing: 8,
@@ -408,7 +417,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                       ],
 
                       // Additional Requirements
-                      if (task['additionalRequirements']?.isNotEmpty == true) ...[
+                      if (task['additionalRequirements']?.isNotEmpty ==
+                          true) ...[
                         _buildSectionHeader(
                           'Additional Requirements',
                           Icons.notes_rounded,
@@ -439,7 +449,10 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                       ],
 
                       // Posted By Section
-                      _buildSectionHeader('Posted By', Icons.person_outline_rounded),
+                      _buildSectionHeader(
+                        'Posted By',
+                        Icons.person_outline_rounded,
+                      ),
                       const SizedBox(height: 12),
                       Container(
                         decoration: BoxDecoration(
@@ -584,95 +597,97 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             child: SafeArea(
               child: _isLoading
                   ? Center(
-                      child: CircularProgressIndicator(color: AppColors.primary),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
                     )
                   : _hasApplied
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.1),
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppColors.success.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.success,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Application Submitted',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.primary, AppColors.secondary],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ApplicationFormPage(
+                                taskId: widget.taskId,
+                                taskTitle: task['title'] ?? '',
+                                clientId: task['clientId'] ?? '',
+                                clientName: task['clientName'] ?? '',
+                              ),
+                            ),
+                          );
+                          if (result == true) {
+                            setState(() {
+                              _hasApplied = true;
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppColors.success.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.check_circle_rounded,
-                                color: AppColors.success,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                'Application Submitted',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.success,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : Container(
-                          height: 56,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [AppColors.primary, AppColors.secondary],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ApplicationFormPage(
-                                    taskId: widget.taskId,
-                                    taskTitle: task['title'] ?? '',
-                                    clientId: task['clientId'] ?? '',
-                                    clientName: task['clientName'] ?? '',
-                                  ),
-                                ),
-                              );
-                              if (result == true) {
-                                setState(() {
-                                  _hasApplied = true;
-                                });
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              foregroundColor: Colors.white,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.send_rounded),
-                                SizedBox(width: 10),
-                                Text(
-                                  'Apply for this Task',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
                         ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.send_rounded),
+                            SizedBox(width: 10),
+                            Text(
+                              'Apply for this Task',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
             ),
           );
         },
@@ -709,10 +724,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       ),
       title: Text(
         label,
-        style: TextStyle(
-          fontSize: 12,
-          color: AppColors.textSecondary,
-        ),
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
       ),
       subtitle: Text(
         value,
@@ -731,9 +743,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       decoration: BoxDecoration(
         color: AppColors.warning.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.warning.withOpacity(0.3),
-        ),
+        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -805,28 +815,18 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 18,
-            color: textColor,
-          ),
+          Icon(icon, size: 18, color: textColor),
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -913,16 +913,16 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
               OutlinedButton(
                 onPressed: () => _updateTaskStatus('cancelled'),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 20,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                   side: BorderSide(color: AppColors.error),
                 ),
-                child: Icon(
-                  Icons.cancel_outlined,
-                  color: AppColors.error,
-                ),
+                child: Icon(Icons.cancel_outlined, color: AppColors.error),
               ),
             ],
           ],

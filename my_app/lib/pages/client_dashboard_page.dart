@@ -248,15 +248,15 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
-            
+
             // Quick Post Task Card
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _buildQuickPostCard(context, colorScheme),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Stats Row
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -274,7 +274,8 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                       final data = doc.data() as Map<String, dynamic>;
                       final status = data['status'] ?? 'active';
                       // Count both active and in_progress as "active" tasks
-                      if (status == 'active' || status == 'in_progress') activeTasks++;
+                      if (status == 'active' || status == 'in_progress')
+                        activeTasks++;
                       if (status == 'completed') completedTasks++;
                       if (status == 'in_progress') inProgressTasks++;
                     }
@@ -331,9 +332,9 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                 },
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Tab Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -361,18 +362,21 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                   labelColor: colorScheme.primary,
                   unselectedLabelColor: const Color(0xFF64748B),
                   labelPadding: EdgeInsets.zero,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                   tabs: const [
                     Tab(text: 'Active'),
-                    Tab(text: 'Applications'),
+                    Tab(text: 'In Progress'),
                     Tab(text: 'Completed'),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Tab Content
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.45,
@@ -421,10 +425,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            colorScheme.primary,
-            colorScheme.primary.withOpacity(0.85),
-          ],
+          colors: [colorScheme.primary, colorScheme.primary.withOpacity(0.85)],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -458,7 +459,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Need help with something?',
+                      'Need help  with something?',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -521,22 +522,6 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
           ),
           const SizedBox(height: 12),
           // Quick category buttons
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildQuickCategoryChip('🎓 Tutoring', colorScheme),
-                const SizedBox(width: 8),
-                _buildQuickCategoryChip('🧹 Cleaning', colorScheme),
-                const SizedBox(width: 8),
-                _buildQuickCategoryChip('🐾 Petcare', colorScheme),
-                const SizedBox(width: 8),
-                _buildQuickCategoryChip('🌱 Gardening', colorScheme),
-                const SizedBox(width: 8),
-                _buildQuickCategoryChip('📦 Moving', colorScheme),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -654,16 +639,18 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
           return const Center(child: CircularProgressIndicator());
         }
 
-        final tasks = snapshot.data?.docs.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          final taskStatus = data['status'] ?? 'active';
-          
-          // For 'active' tab, show both 'active' and 'in_progress' tasks
-          if (status == 'active') {
-            return taskStatus == 'active' || taskStatus == 'in_progress';
-          }
-          return taskStatus == status;
-        }).toList() ?? [];
+        final tasks =
+            snapshot.data?.docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final taskStatus = data['status'] ?? 'active';
+
+              // For 'active' tab, show both 'active' and 'in_progress' tasks
+              if (status == 'active') {
+                return taskStatus == 'active' || taskStatus == 'in_progress';
+              }
+              return taskStatus == status;
+            }).toList() ??
+            [];
 
         if (tasks.isEmpty) {
           return Center(
@@ -773,9 +760,15 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _buildInfoChip(Icons.category_outlined, task['category'] ?? 'Other'),
+                    _buildInfoChip(
+                      Icons.category_outlined,
+                      task['category'] ?? 'Other',
+                    ),
                     const SizedBox(width: 8),
-                    _buildInfoChip(Icons.location_on_outlined, task['location'] ?? 'Not set'),
+                    _buildInfoChip(
+                      Icons.location_on_outlined,
+                      task['location'] ?? 'Not set',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -783,7 +776,10 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: colorScheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
@@ -810,7 +806,10 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: applicationsCount > 0
                             ? const Color(0xFF3B82F6).withOpacity(0.1)
@@ -850,7 +849,9 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                     decoration: BoxDecoration(
                       color: const Color(0xFFDCFCE7),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF86EFAC).withOpacity(0.5)),
+                      border: Border.all(
+                        color: const Color(0xFF86EFAC).withOpacity(0.5),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -907,14 +908,18 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                     ),
                   ),
                 ],
-                if (applicationsCount > 0 && (taskStatus == 'active' || taskStatus == 'in_progress')) ...[
+                if (applicationsCount > 0 &&
+                    (taskStatus == 'active' ||
+                        taskStatus == 'in_progress')) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFEF3C7),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFFCD34D).withOpacity(0.5)),
+                      border: Border.all(
+                        color: const Color(0xFFFCD34D).withOpacity(0.5),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -1144,7 +1149,9 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('✅ Application accepted! Task is now in progress.'),
+                                content: Text(
+                                  '✅ Application accepted! Task is now in progress.',
+                                ),
                                 backgroundColor: Colors.green,
                                 duration: Duration(seconds: 3),
                               ),
@@ -1154,7 +1161,9 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Error accepting application: $e'),
+                                content: Text(
+                                  'Error accepting application: $e',
+                                ),
                                 backgroundColor: Colors.red,
                                 duration: const Duration(seconds: 5),
                               ),
@@ -1266,7 +1275,10 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
     );
   }
 
-  Future<void> _markTaskAsCompleted(String taskId, Map<String, dynamic> task) async {
+  Future<void> _markTaskAsCompleted(
+    String taskId,
+    Map<String, dynamic> task,
+  ) async {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1275,7 +1287,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
         content: Text(
           'Are you sure you want to mark "${task['title']}" as completed?\n\n'
           'This action confirms that ${task['selectedApplicantName'] ?? 'the student'} '
-          'has successfully completed the work.'
+          'has successfully completed the work.',
         ),
         actions: [
           TextButton(
@@ -1299,7 +1311,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
 
     try {
       await _taskService.markTaskAsCompleted(taskId);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1369,11 +1381,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 8,
-            color: textColor,
-          ),
+          Icon(icon, size: 8, color: textColor),
           const SizedBox(width: 6),
           Text(
             label,

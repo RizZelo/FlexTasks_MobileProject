@@ -26,7 +26,8 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
   final ApplicationService _applicationService = ApplicationService();
 
   final TextEditingController _coverLetterController = TextEditingController();
-  final TextEditingController _expectedBudgetController = TextEditingController();
+  final TextEditingController _expectedBudgetController =
+      TextEditingController();
   final TextEditingController _availabilityController = TextEditingController();
   final TextEditingController _experienceController = TextEditingController();
   final TextEditingController _skillsController = TextEditingController();
@@ -64,7 +65,9 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
           content: const Text('Please fill in all required fields'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -98,7 +101,9 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
         Navigator.pop(context, true);
@@ -110,7 +115,9 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
             content: Text(e.toString()),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -138,17 +145,18 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
             flexibleSpace: FlexibleSpaceBar(
               title: const Text(
                 'Apply for Task',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               background: Container(
                 decoration: BoxDecoration(
@@ -221,40 +229,11 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle('Cover Letter *'),
-                    SizedBox(height: 8),
-                    TextFormField(
-                      controller: _coverLetterController,
-                      maxLines: 5,
-                      decoration: InputDecoration(
-                        hintText:
-                            'Introduce yourself and explain why you are the best fit for this task...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please write a cover letter';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 20),
-
-                    _buildSectionTitle('Expected Budget *'),
-                    SizedBox(height: 8),
-                    TextFormField(
-                      controller: _expectedBudgetController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: 'Enter your expected payment',
-                        prefixIcon: Icon(
-                          Icons.attach_money,
-                          color: Colors.teal,
-                        ),
+                    // Info Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: AppColors.info.withOpacity(0.3),
@@ -341,8 +320,10 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: AppColors.primary, width: 2),
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
                               ),
                               errorBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -426,22 +407,29 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                                   decoration: InputDecoration(
                                     hintText: '50',
                                     hintStyle: TextStyle(
-                                      color: AppColors.textSecondary.withOpacity(0.6),
+                                      color: AppColors.textSecondary
+                                          .withOpacity(0.6),
                                     ),
                                     filled: true,
                                     fillColor: AppColors.background,
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: AppColors.border),
+                                      borderSide: BorderSide(
+                                        color: AppColors.border,
+                                      ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: AppColors.border),
+                                      borderSide: BorderSide(
+                                        color: AppColors.border,
+                                      ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
-                                      borderSide:
-                                          BorderSide(color: AppColors.primary, width: 2),
+                                      borderSide: BorderSide(
+                                        color: AppColors.primary,
+                                        width: 2,
+                                      ),
                                     ),
                                     contentPadding: const EdgeInsets.all(14),
                                   ),
@@ -476,7 +464,8 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                               color: AppColors.textPrimary,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'e.g., Weekdays 9am-5pm, Flexible schedule',
+                              hintText:
+                                  'e.g., Weekdays 9am-5pm, Flexible schedule',
                               hintStyle: TextStyle(
                                 color: AppColors.textSecondary.withOpacity(0.6),
                               ),
@@ -492,8 +481,10 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: AppColors.primary, width: 2),
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
                               ),
                               contentPadding: const EdgeInsets.all(16),
                             ),
@@ -551,8 +542,10 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: AppColors.primary, width: 2),
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
                               ),
                               contentPadding: const EdgeInsets.all(16),
                             ),
@@ -578,7 +571,8 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                               color: AppColors.textPrimary,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'e.g., Math, Physics, Patient, Creative',
+                              hintText:
+                                  'e.g., Math, Physics, Patient, Creative',
                               hintStyle: TextStyle(
                                 color: AppColors.textSecondary.withOpacity(0.6),
                               ),
@@ -594,8 +588,10 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: AppColors.primary, width: 2),
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
                               ),
                               contentPadding: const EdgeInsets.all(16),
                             ),
@@ -644,8 +640,10 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: AppColors.primary, width: 2),
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
                               ),
                               contentPadding: const EdgeInsets.all(16),
                             ),
@@ -692,8 +690,12 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          _buildTip('Be specific about your relevant experience'),
-                          _buildTip('Mention any certifications or credentials'),
+                          _buildTip(
+                            'Be specific about your relevant experience',
+                          ),
+                          _buildTip(
+                            'Mention any certifications or credentials',
+                          ),
                           _buildTip('Clearly state your availability'),
                           _buildTip('Set a competitive and fair budget'),
                         ],
@@ -838,13 +840,7 @@ class _ApplicationFormPageState extends State<ApplicationFormPage> {
         ),
         if (required) ...[
           const SizedBox(width: 2),
-          Text(
-            '*',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.error,
-            ),
-          ),
+          Text('*', style: TextStyle(fontSize: 13, color: AppColors.error)),
         ],
       ],
     );
