@@ -7,12 +7,8 @@ import 'pages/task_list_screen.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/student_home_page.dart';
-import 'pages/task_detail_page.dart';
-import 'pages/client_profile_page.dart';
-import 'pages/application_form_page.dart';
 import 'pages/my_applications_page.dart';
 import 'pages/client_dashboard_page.dart';
-import 'pages/task_applications_page.dart';
 import 'services/user_service.dart';
 
 void main() async {
@@ -404,12 +400,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         // If user is logged in, check role and redirect
         if (snapshot.hasData && snapshot.data != null) {
-          // Update online status
+          // Update online status (non-blocking)
           _userService.updateOnlineStatus(true);
 
-          // Check user role and redirect accordingly
-          return FutureBuilder<String?>(
-            future: _userService.getCurrentUserRole(),
+          // Check user role using StreamBuilder for real-time updates
+          return StreamBuilder<DocumentSnapshot>(
+            stream: _userService.getCurrentUserStream(),
             builder: (context, roleSnapshot) {
               if (roleSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
@@ -417,14 +413,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 );
               }
 
-              final role = roleSnapshot.data;
+              if (roleSnapshot.hasData && roleSnapshot.data != null) {
+                final userData = roleSnapshot.data!.data() as Map<String, dynamic>?;
+                final role = userData?['role'] as String?;
 
-              // If role is client, show ClientDashboardPage
-              if (role == 'client') {
-                return const ClientDashboardPage();
+                // If role is client, show ClientDashboardPage
+                if (role == 'client') {
+                  return const ClientDashboardPage();
+                }
+
+                // If role is student or not set, show StudentHomePage
+                return const StudentHomePage();
               }
 
-              // If role is student or not set, show StudentHomePage
+              // Default to StudentHomePage if no data
               return const StudentHomePage();
             },
           );

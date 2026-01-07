@@ -33,11 +33,11 @@ class ReviewService {
 
       final reviewerSnapshot = await transaction.get(reviewerRef);
       final reviewerData =
-          reviewerSnapshot.data() as Map<String, dynamic>? ?? {};
+          reviewerSnapshot.data() ?? {};
 
       final revieweeSnapshot = await transaction.get(revieweeRef);
       final revieweeData =
-          revieweeSnapshot.data() as Map<String, dynamic>? ?? {};
+          revieweeSnapshot.data() ?? {};
 
       final reviewerName =
           reviewerData['name'] ?? currentUser.displayName ?? 'Unknown';

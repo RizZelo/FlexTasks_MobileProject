@@ -28,7 +28,6 @@ class _StudentHomePageState extends State<StudentHomePage> {
   String _selectedCategory = 'All';
   final ConnectionService _connectionService = ConnectionService();
   Set<String> _priorityClientIds = {};
-  bool _isLoadingConnections = true;
   final ChatService _chatService = ChatService();
   StreamSubscription<QuerySnapshot>? _chatSubscription;
   Timestamp? _lastSeenMessageTime;
@@ -62,13 +61,11 @@ class _StudentHomePageState extends State<StudentHomePage> {
       final ids = await _connectionService.getAcceptedConnectionUserIds();
       setState(() {
         _priorityClientIds = ids;
-        _isLoadingConnections = false;
       });
     } catch (e) {
       print('Erreur lors du chargement des connexions: $e');
       setState(() {
         _priorityClientIds = {};
-        _isLoadingConnections = false;
       });
     }
   }

@@ -183,7 +183,6 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -266,7 +265,6 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                   int totalTasks = 0;
                   int activeTasks = 0;
                   int completedTasks = 0;
-                  int inProgressTasks = 0;
 
                   if (taskSnapshot.hasData) {
                     totalTasks = taskSnapshot.data!.docs.length;
@@ -277,7 +275,6 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
                       if (status == 'active' || status == 'in_progress')
                         activeTasks++;
                       if (status == 'completed') completedTasks++;
-                      if (status == 'in_progress') inProgressTasks++;
                     }
                   }
 
@@ -523,25 +520,6 @@ class _ClientDashboardPageState extends State<ClientDashboardPage>
           const SizedBox(height: 12),
           // Quick category buttons
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickCategoryChip(String label, ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
       ),
     );
   }
