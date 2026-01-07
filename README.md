@@ -34,7 +34,7 @@ FlexTasks is a mobile platform designed to bridge the gap between students looki
 - **Review Applications** - View and manage student applications
 - **Real-time Chat** - Communicate with students
 - **Review System** - Rate and review students after task completion
-- 📍 **Meeting Place Setup** - Set task locations with address autocomplete
+- **Meeting Place Setup** - Set task locations with address autocomplete
 
 ### General Features
 -  **Authentication** - Secure login with Firebase Auth & Google Sign-In
@@ -112,8 +112,7 @@ ProjetMobile/
 │   ├── test/                  # Unit & widget tests
 │   ├── pubspec.yaml           # Flutter dependencies
 │   └── firebase.json          # Firebase configuration
-│
-└── passport.js                # Authentication configuration
+
 ```
 
 ##  Prerequisites
@@ -158,7 +157,7 @@ npm install
 4. Download `google-services.json` (Android) and place it in `my_app/android/app/`
 5. Download `GoogleService-Info.plist` (iOS) and place it in `my_app/ios/Runner/`
 
-## ▶️ Running the App
+##  Running the App
 
 ### 1. Start the Backend Server (for location services)
 
@@ -194,7 +193,7 @@ flutter run -d android
 flutter run -d ios
 ```
 
-## 🔥 Firebase Configuration
+##  Firebase Configuration
 
 The app uses Firebase for:
 
@@ -212,19 +211,7 @@ The app uses Firebase for:
 └── reviews/               # User reviews
 ```
 
-## 📸 Screenshots
 
-*Screenshots coming soon*
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
 
 This project is part of an academic project at SUP'COM (INDP2B).
 
