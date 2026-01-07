@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/task_service.dart';
 import '../services/application_service.dart';
 import '../main.dart';
@@ -360,6 +363,17 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                               'Location',
                               task['location'] ?? 'Not specified',
                             ),
+                            // Meeting Place with map link
+                            if (task['meetingPlace'] != null &&
+                                task['meetingPlace'].toString().isNotEmpty) ...[
+                              Divider(height: 1, color: AppColors.border),
+                              _buildMeetingPlaceRow(
+                                task['meetingPlace'],
+                                task['meetingPlaceAddress'],
+                                task['meetingPlaceLat'],
+                                task['meetingPlaceLng'],
+                              ),
+                            ],
                             Divider(height: 1, color: AppColors.border),
                             _buildDetailRow(
                               Icons.schedule_outlined,
@@ -759,6 +773,161 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMeetingPlaceRow(
+    String? meetingPlace,
+    String? address,
+    dynamic lat,
+    dynamic lng,
+  ) {
+    final hasCoordinates = lat != null && lng != null;
+    
+    return InkWell(
+      onTap: hasCoordinates
+          ? () async {
+              // Open OpenStreetMap with the coordinates
+              final url = 'https://www.openstreetmap.org/?mlat=$lat&mlon=$lng#map=16/$lat/$lng';
+              
+              if (await canLaunchUrl(Uri.parse(url))) {
+                await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              }
+            }
+          : null,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.2),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.place_rounded,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Meeting Place',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                if (hasCoordinates)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.map,
+                          size: 12,
+                          color: AppColors.success,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Open Map',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              meetingPlace ?? 'Not specified',
+              style: TextStyle(
+                fontSize: 15,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (address != null && address.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                address,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            // Embedded mini map
+            if (hasCoordinates) ...[
+              const SizedBox(height: 12),
+              Container(
+                height: 150,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: FlutterMap(
+                  options: MapOptions(
+                    initialCenter: LatLng(
+                      (lat is double) ? lat : double.parse(lat.toString()),
+                      (lng is double) ? lng : double.parse(lng.toString()),
+                    ),
+                    initialZoom: 15.0,
+                    interactionOptions: InteractionOptions(
+                      flags: InteractiveFlag.none, // Disable interactions
+                    ),
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                      subdomains: const ['a', 'b', 'c'],
+                      userAgentPackageName: 'com.example.app',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(
+                            (lat is double) ? lat : double.parse(lat.toString()),
+                            (lng is double) ? lng : double.parse(lng.toString()),
+                          ),
+                          width: 40,
+                          height: 40,
+                          child: Icon(
+                            Icons.location_pin,
+                            size: 40,
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

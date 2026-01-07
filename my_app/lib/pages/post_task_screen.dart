@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import '../services/task_service.dart';
+import '../api_service.dart';
 import '../main.dart';
+import 'map_picker_page.dart';
 
 class PostTaskScreen extends StatefulWidget {
   const PostTaskScreen({Key? key}) : super(key: key);
@@ -21,6 +24,7 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _additionalReqController = TextEditingController();
+  final TextEditingController _meetingPlaceController = TextEditingController();
 
   final TaskService _taskService = TaskService();
   bool _isLoading = false;
@@ -30,6 +34,16 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
   bool _backgroundCheck = false;
   bool _experience = false;
   bool _references = false;
+
+  // Location autocomplete
+  List<PlacePrediction> _locationPredictions = [];
+  PlaceDetails? _selectedLocation;
+  bool _isSearchingLocation = false;
+
+  // Meeting place autocomplete
+  List<PlacePrediction> _placePredictions = [];
+  PlaceDetails? _selectedPlace;
+  bool _isSearchingPlaces = false;
 
   final List<Map<String, dynamic>> _categories = [
     {'name': 'Tutoring', 'icon': Icons.school_rounded, 'emoji': '🎓'},
@@ -49,6 +63,7 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
     _locationController.dispose();
     _startDateController.dispose();
     _additionalReqController.dispose();
+    _meetingPlaceController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -545,41 +560,504 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Location Card
+          // Location Card with Autocomplete
           _buildCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildInputLabel('Location', Icons.location_on_rounded),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _locationController,
+                const SizedBox(height: 4),
+                Text(
+                  'Search for a specific location or area',
                   style: TextStyle(
-                    fontSize: 15,
-                    color: AppColors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'e.g., Downtown, Remote, My Place',
-                    hintStyle: TextStyle(
-                      color: AppColors.textSecondary.withOpacity(0.6),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.background,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.primary, width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.all(16),
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
                   ),
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _locationController,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: AppColors.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'e.g., Downtown, City Center, Neighborhood',
+                          hintStyle: TextStyle(
+                            color: AppColors.textSecondary.withOpacity(0.6),
+                          ),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          suffixIcon: _isSearchingLocation
+                              ? Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                )
+                              : _selectedLocation != null
+                                  ? IconButton(
+                                      icon: Icon(Icons.check_circle, color: AppColors.success),
+                                      onPressed: () {},
+                                    )
+                                  : Icon(
+                                      Icons.search,
+                                      color: AppColors.textSecondary,
+                                    ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                        ),
+                        onChanged: (value) async {
+                          if (value.length > 2) {
+                            setState(() {
+                              _isSearchingLocation = true;
+                              _selectedLocation = null;
+                            });
+                            
+                            final predictions = await ApiService.getPlacePredictions(value);
+                            
+                            if (mounted) {
+                              setState(() {
+                                _locationPredictions = predictions;
+                                _isSearchingLocation = false;
+                              });
+                            }
+                          } else {
+                            setState(() {
+                              _locationPredictions = [];
+                              _selectedLocation = null;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Map button for location
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.primary, AppColors.secondary],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.map, color: Colors.white),
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MapPickerPage(
+                                title: 'Select Location',
+                                initialPosition: _selectedLocation != null
+                                    ? LatLng(_selectedLocation!.lat ?? 40.7128, _selectedLocation!.lng ?? -74.0060)
+                                    : null,
+                              ),
+                            ),
+                          );
+
+                          if (result != null) {
+                            setState(() {
+                              _locationController.text = result['address'];
+                              _selectedLocation = PlaceDetails(
+                                name: result['address'],
+                                address: result['address'],
+                                placeId: '',
+                                lat: result['lat'],
+                                lng: result['lng'],
+                              );
+                            });
+                          }
+                        },
+                        tooltip: 'Pick from map',
+                      ),
+                    ),
+                  ],
+                ),
+                // Location suggestions dropdown
+                if (_locationPredictions.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.all(8),
+                      itemCount: _locationPredictions.length,
+                      separatorBuilder: (context, index) => Divider(
+                        color: AppColors.border,
+                        height: 1,
+                      ),
+                      itemBuilder: (context, index) {
+                        final prediction = _locationPredictions[index];
+                        return ListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          leading: Icon(
+                            Icons.location_on,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                          title: Text(
+                            prediction.description,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          onTap: () async {
+                            setState(() {
+                              _locationController.text = prediction.description;
+                              _locationPredictions = [];
+                              _isSearchingLocation = true;
+                            });
+                            
+                            // Fetch place details
+                            final details = await ApiService.getPlaceDetails(
+                              prediction.placeId,
+                            );
+                            
+                            if (mounted) {
+                              setState(() {
+                                _selectedLocation = details;
+                                _isSearchingLocation = false;
+                              });
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                // Selected location info
+                if (_selectedLocation != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.success.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: AppColors.success,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedLocation!.name,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _selectedLocation!.address,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Meeting Place Card with Autocomplete
+          _buildCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInputLabel('Meeting Place', Icons.place_rounded),
+                const SizedBox(height: 4),
+                Text(
+                  'Search for a specific location',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _meetingPlaceController,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: AppColors.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'e.g., Central Library, Coffee Shop',
+                          hintStyle: TextStyle(
+                            color: AppColors.textSecondary.withOpacity(0.6),
+                          ),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          suffixIcon: _isSearchingPlaces
+                              ? Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                )
+                              : _selectedPlace != null
+                                  ? IconButton(
+                                      icon: Icon(Icons.check_circle, color: AppColors.success),
+                                      onPressed: () {},
+                                    )
+                                  : null,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                        ),
+                        onChanged: (value) async {
+                          if (value.length > 2) {
+                            setState(() {
+                              _isSearchingPlaces = true;
+                              _selectedPlace = null;
+                            });
+                            
+                            final predictions = await ApiService.getPlacePredictions(value);
+                            
+                            if (mounted) {
+                              setState(() {
+                                _placePredictions = predictions;
+                                _isSearchingPlaces = false;
+                              });
+                            }
+                          } else {
+                            setState(() {
+                              _placePredictions = [];
+                              _selectedPlace = null;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Map button for meeting place
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.primary, AppColors.secondary],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.map, color: Colors.white),
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MapPickerPage(
+                                title: 'Select Meeting Place',
+                                initialPosition: _selectedPlace != null
+                                    ? LatLng(_selectedPlace!.lat ?? 40.7128, _selectedPlace!.lng ?? -74.0060)
+                                    : null,
+                              ),
+                            ),
+                          );
+
+                          if (result != null) {
+                            setState(() {
+                              _meetingPlaceController.text = result['address'];
+                              _selectedPlace = PlaceDetails(
+                                name: result['address'],
+                                address: result['address'],
+                                placeId: '',
+                                lat: result['lat'],
+                                lng: result['lng'],
+                              );
+                            });
+                          }
+                        },
+                        tooltip: 'Pick from map',
+                      ),
+                    ),
+                  ],
+                ),
+                // Place suggestions dropdown
+                if (_placePredictions.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.all(8),
+                      itemCount: _placePredictions.length,
+                      separatorBuilder: (context, index) => Divider(
+                        color: AppColors.border,
+                        height: 1,
+                      ),
+                      itemBuilder: (context, index) {
+                        final prediction = _placePredictions[index];
+                        return ListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          leading: Icon(
+                            Icons.location_on,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                          title: Text(
+                            prediction.description,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          onTap: () async {
+                            setState(() {
+                              _meetingPlaceController.text = prediction.description;
+                              _placePredictions = [];
+                              _isSearchingPlaces = true;
+                            });
+                            
+                            // Fetch place details
+                            final details = await ApiService.getPlaceDetails(
+                              prediction.placeId,
+                            );
+                            
+                            if (mounted) {
+                              setState(() {
+                                _selectedPlace = details;
+                                _isSearchingPlaces = false;
+                              });
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                // Selected place info
+                if (_selectedPlace != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.success.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: AppColors.success,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedPlace!.name,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _selectedPlace!.address,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1062,6 +1540,11 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
         location: _locationController.text.trim(),
         startDate: _startDateController.text.trim(),
         additionalRequirements: _additionalReqController.text.trim(),
+        meetingPlace: _selectedPlace?.name ?? _meetingPlaceController.text.trim(),
+        meetingPlaceId: _selectedPlace?.placeId,
+        meetingPlaceAddress: _selectedPlace?.address,
+        meetingPlaceLat: _selectedPlace?.lat,
+        meetingPlaceLng: _selectedPlace?.lng,
         backgroundCheckRequired: _backgroundCheck,
         experienceRequired: _experience,
         referencesNeeded: _references,

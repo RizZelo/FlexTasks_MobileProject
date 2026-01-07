@@ -18,6 +18,11 @@ class TaskService {
     required String location,
     required String startDate,
     String? additionalRequirements,
+    String? meetingPlace,
+    String? meetingPlaceId,
+    String? meetingPlaceAddress,
+    double? meetingPlaceLat,
+    double? meetingPlaceLng,
     bool backgroundCheckRequired = false,
     bool experienceRequired = false,
     bool referencesNeeded = false,
@@ -35,6 +40,11 @@ class TaskService {
         'location': location,
         'startDate': startDate,
         'additionalRequirements': additionalRequirements ?? '',
+        'meetingPlace': meetingPlace ?? '',
+        'meetingPlaceId': meetingPlaceId ?? '',
+        'meetingPlaceAddress': meetingPlaceAddress ?? '',
+        'meetingPlaceLat': meetingPlaceLat,
+        'meetingPlaceLng': meetingPlaceLng,
         'backgroundCheckRequired': backgroundCheckRequired,
         'experienceRequired': experienceRequired,
         'referencesNeeded': referencesNeeded,
@@ -106,6 +116,11 @@ class TaskService {
     String? location,
     String? startDate,
     String? additionalRequirements,
+    String? meetingPlace,
+    String? meetingPlaceId,
+    String? meetingPlaceAddress,
+    double? meetingPlaceLat,
+    double? meetingPlaceLng,
     bool? backgroundCheckRequired,
     bool? experienceRequired,
     bool? referencesNeeded,
@@ -126,6 +141,11 @@ class TaskService {
       if (additionalRequirements != null) {
         updates['additionalRequirements'] = additionalRequirements;
       }
+      if (meetingPlace != null) updates['meetingPlace'] = meetingPlace;
+      if (meetingPlaceId != null) updates['meetingPlaceId'] = meetingPlaceId;
+      if (meetingPlaceAddress != null) updates['meetingPlaceAddress'] = meetingPlaceAddress;
+      if (meetingPlaceLat != null) updates['meetingPlaceLat'] = meetingPlaceLat;
+      if (meetingPlaceLng != null) updates['meetingPlaceLng'] = meetingPlaceLng;
       if (backgroundCheckRequired != null) {
         updates['backgroundCheckRequired'] = backgroundCheckRequired;
       }
